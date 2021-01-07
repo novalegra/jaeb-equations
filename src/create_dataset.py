@@ -63,13 +63,20 @@ rows_without_demographic_data = [
 aggregate_output_rows = rows_without_demographic_data.copy()
 aggregate_output_rows.extend([age, bmi, bmi_percentile, num_reports])
 
-input_directory = "phi-all-setting-schedule_dataset-basal_minutes_30-outcome_hours_3-expanded_windows_False-days_around_issue_report_7"
 analysis_name = "make_dataset"
 all_patient_files = glob.glob(
-    os.path.join("..", "jaeb-analysis", "data", ".PHI", "*LOOP*",)
+    os.path.join(
+        "..",
+        "jaeb-analysis",
+        "data",
+        ".PHI",
+        "*LOOP*",
+    )
 )
+print("Found {} patient files".format(len(all_patient_files)))
 
 all_output_rows_df = None
+num_files_skipped = 0
 
 for file_path in all_patient_files:
     print("Loading file at {}".format(file_path))
@@ -92,6 +99,7 @@ for file_path in all_patient_files:
 
     if len(best_rows.index) < 1:
         print("Skipping file at {} due to no rows fitting criteria".format(file_path))
+        num_files_skipped += 1
         continue
 
     all_output_rows_df = all_output_rows_df.append(best_rows.iloc[0], ignore_index=True)
@@ -154,6 +162,7 @@ survey_data_file_name = "Primary-Outcome-Listings"
 survey_path = utils.find_full_path(survey_data_file_name, ".csv")
 survey_df = pd.read_csv(survey_path)
 survey_data_loop_id = "PtID"
+num_without_demographics = 0
 
 # Add survey data
 for i in range(len(all_patients_df.index)):
@@ -163,6 +172,7 @@ for i in range(len(all_patients_df.index)):
 
     if len(rows.index) < 1:
         print("Couldn't find demographic info for patient {}".format(patient_id))
+        num_without_demographics += 1
         continue
 
     row = rows.iloc[0]
@@ -173,6 +183,12 @@ for i in range(len(all_patients_df.index)):
     if row[bmi_percentile] != ".":
         all_patients_df.loc[i, bmi_percentile] = row[bmi_percentile]
 
+print(
+    "Skipped {} issue report files due to no rows fitting criteria".format(
+        num_files_skipped
+    )
+)
+print("Skipped {} patients due to no demographic data".format(num_without_demographics))
 print(all_patients_df.head())
 
 export(all_output_rows_df, "all_selected_rows")
