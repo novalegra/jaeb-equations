@@ -39,9 +39,6 @@ bmi = "BMI"
 bmi_percentile = "BMIPercentile"
 age = "Age"
 
-# From our aggregation
-num_reports = "num_reports_used"
-
 rows_without_demographic_data = [
     loop_id,
     percent_true,
@@ -61,7 +58,7 @@ rows_without_demographic_data = [
 ]
 
 aggregate_output_rows = rows_without_demographic_data.copy()
-aggregate_output_rows.extend([age, bmi, bmi_percentile, num_reports])
+aggregate_output_rows.extend([age, bmi, bmi_percentile, issue_report_date])
 
 analysis_name = "make_dataset"
 all_patient_files = glob.glob(
@@ -73,10 +70,10 @@ all_patient_files = glob.glob(
         "*LOOP*",
     )
 )
-print("Found {} patient files".format(len(all_patient_files)))
 
 all_output_rows_df = None
-num_files_skipped = 0
+num_skipped_lack_cgm = 0
+num_skipped_percent_true = 0
 
 for file_path in all_patient_files:
     print("Loading file at {}".format(file_path))
@@ -89,8 +86,10 @@ for file_path in all_patient_files:
     df.dropna(subset=rows_without_demographic_data)
 
     # Don't include data where Loop wasn't running for most of the time
-    # TODO: consult with the others about this threshold once we have rest of data
+    # TODO: consult with the others about this threshold
     if df[percent_true].max() < 75:
+        print("Skipping file at {} due to percent true being too low".format(file_path))
+        num_skipped_percent_true += 1
         continue
 
     best_rows = df[
@@ -99,7 +98,7 @@ for file_path in all_patient_files:
 
     if len(best_rows.index) < 1:
         print("Skipping file at {} due to no rows fitting criteria".format(file_path))
-        num_files_skipped += 1
+        num_skipped_lack_cgm += 1
         continue
 
     all_output_rows_df = all_output_rows_df.append(best_rows.iloc[0], ignore_index=True)
@@ -118,45 +117,8 @@ def export(dataframe, df_descriptor):
     )
 
 
-patient_dfs = all_output_rows_df.groupby(loop_id)
-all_patients_df = pd.DataFrame(columns=aggregate_output_rows)
+annotated_issue_reports_df = pd.DataFrame(columns=aggregate_output_rows)
 print("We have {} unique patient IDs".format(len(all_output_rows_df[loop_id].unique())))
-
-# Aggregate all the rows together for each patient
-for id, df in patient_dfs:
-    print("Aggregating data for patient {}".format(id))
-    row = [
-        id,
-        df[percent_true].mean(),
-        df[percent_cgm].mean(),
-        df[tdd].mean(),
-        df[total_daily_basal].mean(),
-        df[total_daily_carbs].mean(),
-        df[isf].mean(),
-        df[icr].mean(),
-        df[percent_below_40].mean(),
-        df[percent_below_54].mean(),
-        df[percent_below_70].mean(),
-        df[tir].mean(),
-        df[percent_above_180].mean(),
-        df[percent_above_250].mean(),
-        df[percent_above_400].mean(),
-        # Set a placeholder in the demographics columns
-        None,
-        None,
-        None,
-        len(df.index),
-    ]
-
-    # Check that percents make sense
-    assert (
-        99.9
-        <= df[percent_below_70].mean() + df[tir].mean() + df[percent_above_180].mean()
-        <= 100.1
-    )
-
-    all_patients_df.loc[len(all_patients_df.index)] = row
-
 
 survey_data_file_name = "Primary-Outcome-Listings"
 survey_path = utils.find_full_path(survey_data_file_name, ".csv")
@@ -165,31 +127,76 @@ survey_data_loop_id = "PtID"
 num_without_demographics = 0
 
 # Add survey data
-for i in range(len(all_patients_df.index)):
-    patient_id = all_patients_df.loc[i, loop_id]
-    print("Adding survey data for patient {}".format(patient_id))
-    rows = survey_df[survey_df[survey_data_loop_id] == patient_id]
+for i in range(len(all_output_rows_df.index)):
+    selected_row = all_output_rows_df.loc[i]
 
-    if len(rows.index) < 1:
+    assert (
+        99.9
+        <= selected_row[percent_below_70]
+        + selected_row[tir]
+        + selected_row[percent_above_180]
+        <= 100.1
+    )
+
+    patient_id = all_output_rows_df.loc[i, loop_id]
+    demographics_rows = survey_df[survey_df[survey_data_loop_id] == patient_id]
+
+    if len(demographics_rows.index) < 1:
         print("Couldn't find demographic info for patient {}".format(patient_id))
         num_without_demographics += 1
         continue
 
-    row = rows.iloc[0]
+    demographic_row = demographics_rows.iloc[0]
+    demographic_bmi = demographic_row[bmi] if demographic_row[bmi] != "." else None
+    demographic_bmi_percent = (
+        demographic_row[bmi_percentile]
+        if demographic_row[bmi_percentile] != "."
+        else None
+    )
 
-    all_patients_df.loc[i, age] = row[age]
-    if row[bmi] != ".":
-        all_patients_df.loc[i, bmi] = row[bmi]
-    if row[bmi_percentile] != ".":
-        all_patients_df.loc[i, bmi_percentile] = row[bmi_percentile]
+    simplified_row = [
+        selected_row[loop_id],
+        selected_row[percent_true],
+        selected_row[percent_cgm],
+        selected_row[tdd],
+        selected_row[total_daily_basal],
+        selected_row[total_daily_carbs],
+        selected_row[isf],
+        selected_row[icr],
+        selected_row[percent_below_40],
+        selected_row[percent_below_54],
+        selected_row[percent_below_70],
+        selected_row[tir],
+        selected_row[percent_above_180],
+        selected_row[percent_above_250],
+        selected_row[percent_above_400],
+        demographic_row[age],
+        demographic_bmi,
+        demographic_bmi_percent,
+        selected_row[issue_report_date],
+    ]
 
+    annotated_issue_reports_df.loc[
+        len(annotated_issue_reports_df.index)
+    ] = simplified_row
+
+num_files = len(all_patient_files)
 print(
-    "Skipped {} issue report files due to no rows fitting criteria".format(
-        num_files_skipped
+    "Skipped {}/{} files due to lack of CGM data".format(
+        num_skipped_lack_cgm, num_files
     )
 )
-print("Skipped {} patients due to no demographic data".format(num_without_demographics))
-print(all_patients_df.head())
+print(
+    "Skipped {}/{} files due to Loop not running at least 75% of time".format(
+        num_skipped_percent_true, num_files
+    )
+)
+print(
+    "Skipped {}/{} files due to no demographic data".format(
+        num_without_demographics, num_files
+    )
+)
+print(annotated_issue_reports_df.head())
 
 export(all_output_rows_df, "all_selected_rows")
-export(all_patients_df, "aggregated_rows_per_patient")
+export(annotated_issue_reports_df, "aggregated_rows_per_patient")
