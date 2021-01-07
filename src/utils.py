@@ -35,38 +35,43 @@ def extract_bmi_percentile(s):
 
 
 def filter_aspirational_data_adult(df, keys):
-    adults = df[
-        (df[keys["age"]] >= 18)
+    adults = df[df[keys["age"]] >= 18]
+    before_size = len(adults)
+    adults = adults[
         # Normal weight
-        & (df[keys["bmi"]] < 25)
+        (df[keys["bmi"]] < 25)
         & (df[keys["bmi"]] >= 18.5)
     ]
+    print("Adult BMI filter: {} -> {} pts".format(before_size, len(adults)))
     return filter_aspirational_data_without_weight(adults, keys)
 
 
 def filter_aspirational_data_peds(df, keys):
     peds = df[(df[keys["age"]] < 18) & (df[keys["bmi_perc"]] != ".")]
-    peds[keys["bmi_perc"]] = peds[keys["bmi_perc"]].apply(extract_bmi_percentile)
+    before_size = len(peds)
     peds = peds[
         # Normal weight
-        (peds[keys["bmi_perc"]] < 85)
-        & (peds[keys["bmi_perc"]] >= 5)
+        (peds[keys["bmi_perc"]] < 0.85)
+        & (peds[keys["bmi_perc"]] >= 0.05)
     ]
-
+    print("Peds BMI filter: {} -> {} pts".format(before_size, len(peds)))
     return filter_aspirational_data_without_weight(peds, keys)
 
 
 def filter_aspirational_data_without_weight(df, keys):
-    if "days_with_insulin" in keys:
+    if "days_with_insulin" in keys and keys["days_with_insulin"] is not None:
         df = df[df[keys["days_with_insulin"] >= 14]]
+
+    before_size = len(df)
+    df = df[df[keys["percent_below_40"]] == 0]
+    print("<40 filter: {} -> {} pts".format(before_size, len(df)))
 
     return df[
         (df[keys["total_daily_basal"]] > 1)
         # Enough data to evaluate
-        (df[keys["percent_cgm_available"]] >= 90)
-        # & (df[keys["days_with_insulin"]] >= 14)
+        & (df[keys["percent_cgm_available"]] >= 90)
         # Good CGM distributions
-        & (df[keys["percent_below_40"]] == 0)
+        # & (df[keys["percent_below_40"]] == 0)
         & (df[keys["percent_below_54"]] < 1)
         & (df[keys["percent_70_180"]] >= 70)
         & (df[keys["percent_above_250"]] < 5)
@@ -179,8 +184,8 @@ def two_dimension_plot(x, y, labels=["", ""], title="", ylim=None):
 
 
 def log_likelihood(n, k, sum_squared_errors, std_dev):
-    """ 
-    Find the maximum log likelihood for a *normal* distribution 
+    """
+    Find the maximum log likelihood for a *normal* distribution
     Note: formula is from
     https://www.statlect.com/fundamentals-of-statistics/
     normal-distribution-maximum-likelihood
@@ -195,8 +200,8 @@ def log_likelihood(n, k, sum_squared_errors, std_dev):
 
 
 def aic_bic(n, k, sum_squared_errors, std_dev):
-    """ 
-    Compute Akaike Information Criterion (AIC) & 
+    """
+    Compute Akaike Information Criterion (AIC) &
     Bayesian Information Criterion (BIC)
     """
     max_log_likelihood = log_likelihood(n, k, sum_squared_errors, std_dev)
@@ -229,7 +234,7 @@ def find_full_path(resource_name, extension):
 
 
 def find_matching_file_name(key, extension, search_dir):
-    """ Find file path, given key and extension
+    """Find file path, given key and extension
         example: "/home/pi/Media/tidepool_demo.json"
 
         This will return the *first* instance of the file
