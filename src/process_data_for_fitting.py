@@ -1,27 +1,53 @@
 import pandas as pd
-
+from sklearn.model_selection import train_test_split
 import utils
+import numpy as np
 
-
-input_file_name = "phi-uniq_set-3hr_hyst-2020_08_29_23-v0_1_develop-12c5af2"
+input_file_name = (
+    "processed-30-min-win_aggregated_rows_per_patient-2021_01_07_22-v0_1-1a5d18c"
+)
 data_path = utils.find_full_path(input_file_name, ".csv")
-df = pd.read_csv(data_path)
+df = pd.read_csv(data_path, index_col=0)
 analysis_name = "evaluate-equations"
+percent_test_data = 0.3
 
-tdd = "total_daily_dose_avg"
-basal = "total_daily_basal_insulin_avg"  # Total daily basal
-carb = "total_daily_carb_avg"  # Total daily CHO
-bmi = "bmi_at_baseline"
-bmi_percentile = "bmi_perc_at_baseline"
-isf = "isf"
-icr = "carb_ratio"
-age = "age_at_baseline"
-tir = "percent_70_180_2week"
-percent_below_40 = "percent_below_40_2week"
-percent_below_54 = "percent_below_54_2week"
-percent_above_250 = "percent_above_250_2week"
+
+def export(dataframe, df_descriptor, short_file_name="processed-aspirational"):
+    dataframe.to_csv(
+        utils.get_save_path_with_file(
+            short_file_name,
+            analysis_name,
+            short_file_name
+            + "_"
+            + df_descriptor
+            + "_"
+            + utils.get_file_stamps()[0]
+            + ".csv",
+            "dataset-creation",
+        )
+    )
+
+
+tdd = "avg_total_insulin_per_day_outcomes"
+basal = "avg_basal_insulin_per_day_outcomes"  # Total daily basal
+total_daily_carbs = "avg_carbs_per_day_outcomes"  # Total daily CHO
+isf = "avg_isf"
+icr = "weighted_cir_outcomes"
+tir = "percent_70_180"
+percent_below_40 = "percent_below_40"
+percent_below_54 = "percent_below_54"
+percent_below_70 = "percent_below_70"
+percent_above_180 = "percent_above_180"
+percent_above_250 = "percent_above_250"
+percent_above_400 = "percent_above_400"
 percent_cgm = "percent_cgm_available"
-days_insulin = "days_with_insulin"
+days_insulin = None
+loop_id = "loop_id"
+
+# From the survey data
+bmi = "BMI"
+bmi_percentile = "BMIPercentile"
+age = "Age"
 
 keys = {
     "age": age,
@@ -35,48 +61,51 @@ keys = {
     "percent_70_180": tir,
     "percent_above_250": percent_above_250,
 }
+print(df.head())
+print(df.shape)
 aspirational_adults = utils.filter_aspirational_data_adult(df, keys)
 aspirational_peds = utils.filter_aspirational_data_peds(df, keys)
 aspirational_overall = pd.concat([aspirational_adults, aspirational_peds])
-print(aspirational_overall.shape)
+print(
+    "{}/{} ({}%) aspirational issue reports ({}/{} our unique patients ({}%))".format(
+        len(aspirational_overall),
+        len(df),
+        round(len(aspirational_overall) / len(df) * 100),
+        len(aspirational_overall[loop_id].unique()),
+        len(df[loop_id].unique()),
+        round(
+            len(aspirational_overall[loop_id].unique())
+            / len(df[loop_id].unique())
+            * 100
+        ),
+    )
+)
+export(aspirational_overall, "overall")
+
+y_cols = [isf, icr, basal, age]
+
+train, test, y_train, y_test = train_test_split(
+    aspirational_overall.drop(columns=y_cols).to_numpy(),
+    aspirational_overall[y_cols].to_numpy(),
+    test_size=percent_test_data,
+    random_state=1,
+)
+
+combined_train = np.concatenate((train, y_train), axis=1)
+combined_test = np.concatenate((test, y_test), axis=1)
+column_labels = np.append(
+    aspirational_overall.drop(columns=y_cols).columns.values,
+    y_cols,
+)
+
+# Reserve a stratified 30% of data for final testing
+export(utils.numpy_to_pandas(column_labels, combined_train), "train")
+export(utils.numpy_to_pandas(column_labels, combined_test), "test")
 
 utils.find_and_export_kfolds(
-    aspirational_adults,
-    input_file_name,
-    analysis_name,
-    utils.DemographicSelection.ADULT,
-    n_splits=5,
-)
-utils.find_and_export_kfolds(
-    aspirational_peds,
-    input_file_name,
-    analysis_name,
-    utils.DemographicSelection.PEDIATRIC,
-    n_splits=5,
-)
-utils.find_and_export_kfolds(
-    aspirational_overall,
+    utils.numpy_to_pandas(column_labels, combined_train),
     input_file_name,
     analysis_name,
     utils.DemographicSelection.OVERALL,
     n_splits=5,
-)
-
-
-aspirational_adults.to_csv(
-    utils.get_save_path_with_file(
-        input_file_name, analysis_name, "adult_aspirational.csv", "data-processing",
-    )
-)
-
-aspirational_peds.to_csv(
-    utils.get_save_path_with_file(
-        input_file_name, analysis_name, "peds_aspirational.csv", "data-processing",
-    )
-)
-
-aspirational_overall.to_csv(
-    utils.get_save_path_with_file(
-        input_file_name, analysis_name, "overall_aspirational.csv", "data-processing",
-    )
 )

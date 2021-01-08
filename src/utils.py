@@ -34,6 +34,10 @@ def extract_bmi_percentile(s):
     return int(s[:-1])
 
 
+def numpy_to_pandas(column_names, data):
+    return pd.DataFrame(data=data, columns=column_names)
+
+
 def filter_aspirational_data_adult(df, keys):
     adults = df[df[keys["age"]] >= 18]
     before_size = len(adults)
