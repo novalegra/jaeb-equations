@@ -111,7 +111,12 @@ def export(dataframe, df_descriptor):
         utils.get_save_path_with_file(
             short_file_name,
             analysis_name,
-            short_file_name + "_" + df_descriptor + ".csv",
+            short_file_name
+            + "_"
+            + df_descriptor
+            + "_"
+            + utils.get_file_stamps()[0]
+            + ".csv",
             "dataset-creation",
         )
     )
