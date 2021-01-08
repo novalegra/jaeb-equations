@@ -98,7 +98,7 @@ column_labels = np.append(
     y_cols,
 )
 
-# Reserve a stratified 30% of data for final testing
+# Reserve a stratified 'percent_test_data' of data for final testing
 export(utils.numpy_to_pandas(column_labels, combined_train), "train")
 export(utils.numpy_to_pandas(column_labels, combined_test), "test")
 
