@@ -10,10 +10,10 @@ get directory
 create output dataset
 
 for each file in directory that matches regex:
-    pull the row with the max value of 'percent_true_over_outcome'
+    pull the row with the max value of 'cgm_available'
 
-add info from other datasets to cleaned settings
-export all patients
+add info from other datasets to cleaned issue report row data
+export all rows
 """
 
 # From the individual issue report data
@@ -62,18 +62,11 @@ aggregate_output_rows.extend([age, bmi, bmi_percentile, issue_report_date])
 
 analysis_name = "make_dataset"
 all_patient_files = glob.glob(
-    os.path.join(
-        "..",
-        "jaeb-analysis",
-        "data",
-        ".PHI",
-        "*LOOP*",
-    )
+    os.path.join("..", "jaeb-analysis", "data", ".PHI", "*LOOP*",)
 )
 
 all_output_rows_df = None
 num_skipped_lack_cgm = 0
-num_skipped_percent_true = 0
 
 for file_path in all_patient_files:
     print("Loading file at {}".format(file_path))
@@ -85,19 +78,13 @@ for file_path in all_patient_files:
 
     df.dropna(subset=rows_without_demographic_data)
 
-    # Don't include data where Loop wasn't running for most of the time
-    # TODO: consult with the others about this threshold
-    if df[percent_true].max() < 75:
-        print("Skipping file at {} due to percent true being too low".format(file_path))
-        num_skipped_percent_true += 1
-        continue
-
-    best_rows = df[
-        (df[percent_true] == df[percent_true].max()) & (df[percent_cgm] >= 90)
-    ]
+    # Select the row that highest chance Loop was running for a long time
+    best_rows = df[(df[percent_cgm] == df[percent_cgm].max()) & (df[percent_cgm] >= 90)]
 
     if len(best_rows.index) < 1:
-        print("Skipping file at {} due to no rows fitting criteria".format(file_path))
+        print(
+            "Skipping file at {} due to no rows with >= 90% CGM data".format(file_path)
+        )
         num_skipped_lack_cgm += 1
         continue
 
@@ -189,11 +176,6 @@ num_files = len(all_patient_files)
 print(
     "Skipped {}/{} files due to lack of CGM data".format(
         num_skipped_lack_cgm, num_files
-    )
-)
-print(
-    "Skipped {}/{} files due to Loop not running at least 75% of time".format(
-        num_skipped_percent_true, num_files
     )
 )
 print(
