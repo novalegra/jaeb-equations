@@ -58,6 +58,7 @@ keys = {
     "days_with_insulin": days_insulin,
     "percent_below_40": percent_below_40,
     "percent_below_54": percent_below_54,
+    "percent_below_70": percent_below_70,
     "percent_70_180": tir,
     "percent_above_250": percent_above_250,
 }

@@ -66,18 +66,14 @@ def filter_aspirational_data_without_weight(df, keys):
     if "days_with_insulin" in keys and keys["days_with_insulin"] is not None:
         df = df[df[keys["days_with_insulin"] >= 14]]
 
-    before_size = len(df)
-    df = df[df[keys["percent_below_40"]] == 0]
-    print("<40 filter: {} -> {} pts".format(before_size, len(df)))
-
     return df[
         (df[keys["total_daily_basal"]] > 1)
         # Enough data to evaluate
         & (df[keys["percent_cgm_available"]] >= 90)
         # Good CGM distributions
-        # & (df[keys["percent_below_40"]] == 0)
         & (df[keys["percent_below_54"]] < 1)
-        & (df[keys["percent_70_180"]] >= 70)
+        & (df[keys["percent_below_70"]] < 4)
+        & (df[keys["percent_70_180"]] > 70)
         & (df[keys["percent_above_250"]] < 5)
     ]
 
