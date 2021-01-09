@@ -324,7 +324,7 @@ def find_and_export_kfolds(df, input_file_name, analysis_name, demographic, n_sp
 
     group = 1
     for train_indexes, test_indexes in kf.split(df):
-        df.iloc[train_indexes].to_csv(
+        df.iloc[train_indexes].reset_index(drop=True).to_csv(
             get_save_path_with_file(
                 input_file_name,
                 analysis_name,
@@ -338,7 +338,7 @@ def find_and_export_kfolds(df, input_file_name, analysis_name, demographic, n_sp
                 "data-processing",
             )
         )
-        df.iloc[test_indexes].to_csv(
+        df.iloc[test_indexes].reset_index(drop=True).to_csv(
             get_save_path_with_file(
                 input_file_name,
                 analysis_name,
