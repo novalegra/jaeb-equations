@@ -4,7 +4,7 @@ import utils
 import numpy as np
 
 input_file_name = (
-    "processed-30-min-win_aggregated_rows_per_patient-2021_01_07_22-v0_1-1a5d18c"
+    "processed-30-min-win_aggregated_rows_per_patient_2021_01_09_01-v0_1-50aca7a"
 )
 data_path = utils.find_full_path(input_file_name, ".csv")
 df = pd.read_csv(data_path, index_col=0)
@@ -67,7 +67,7 @@ aspirational_adults = utils.filter_aspirational_data_adult(df, keys)
 aspirational_peds = utils.filter_aspirational_data_peds(df, keys)
 aspirational_overall = pd.concat([aspirational_adults, aspirational_peds])
 print(
-    "{}/{} ({}%) aspirational issue reports ({}/{} our unique patients ({}%))".format(
+    "{}/{} ({}%) aspirational issue reports, which is {}/{} ({}%) of the patients".format(
         len(aspirational_overall),
         len(df),
         round(len(aspirational_overall) / len(df) * 100),
@@ -94,9 +94,10 @@ train, test, y_train, y_test = train_test_split(
 combined_train = np.concatenate((train, y_train), axis=1)
 combined_test = np.concatenate((test, y_test), axis=1)
 column_labels = np.append(
-    aspirational_overall.drop(columns=y_cols).columns.values,
-    y_cols,
+    aspirational_overall.drop(columns=y_cols).columns.values, y_cols,
 )
+print("Train: {} reports".format(len(combined_train)))
+print("Test: {} reports".format(len(combined_test)))
 
 # Reserve a stratified 'percent_test_data' of data for final testing
 export(utils.numpy_to_pandas(column_labels, combined_train), "train")
