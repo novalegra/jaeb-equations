@@ -109,3 +109,5 @@ results/
 .vscode/.ropeproject/
 
 .reports
+
+.vscode/
