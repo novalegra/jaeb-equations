@@ -38,6 +38,11 @@ percent_true = "percent_true_over_outcome"
 bmi = "BMI"
 bmi_percentile = "BMIPercentile"
 age = "Age"
+weight = "weight"
+
+# Computed
+kg_per_lb = 0.453592
+tdd_per_kg = "tdd_per_kg"
 
 rows_without_demographic_data = [
     loop_id,
@@ -58,7 +63,9 @@ rows_without_demographic_data = [
 ]
 
 aggregate_output_rows = rows_without_demographic_data.copy()
-aggregate_output_rows.extend([age, bmi, bmi_percentile, issue_report_date])
+aggregate_output_rows.extend(
+    [age, bmi, bmi_percentile, weight, tdd_per_kg, issue_report_date]
+)
 
 analysis_name = "make_dataset"
 all_patient_files = glob.glob(
@@ -116,7 +123,16 @@ survey_data_file_name = "Primary-Outcome-Listings"
 survey_path = utils.find_full_path(survey_data_file_name, ".csv")
 survey_df = pd.read_csv(survey_path)
 survey_data_loop_id = "PtID"
+
+weight_data_file_name = (
+    "PHI Tidepool Survey Data 08-19-2020-cleaned-2020_09_15_13-v0_1_develop-cfb2713"
+)
+weight_path = utils.find_full_path(weight_data_file_name, ".csv")
+weight_df = pd.read_csv(weight_path)
+weight_loop_id = "loop_id"
+
 num_without_demographics = 0
+num_without_weight = 0
 
 # Add survey data
 for i in range(len(all_output_rows_df.index)):
@@ -132,13 +148,17 @@ for i in range(len(all_output_rows_df.index)):
 
     patient_id = all_output_rows_df.loc[i, loop_id]
     demographics_rows = survey_df[survey_df[survey_data_loop_id] == patient_id]
+    weight_rows = weight_df[weight_df[weight_loop_id] == patient_id]
 
     if len(demographics_rows.index) < 1:
-        print("Couldn't find demographic info for patient {}".format(patient_id))
         num_without_demographics += 1
+        continue
+    elif len(weight_rows.index) < 1:
+        num_without_weight += 1
         continue
 
     demographic_row = demographics_rows.iloc[0]
+    weight_row = weight_rows.iloc[0]
     demographic_bmi = demographic_row[bmi] if demographic_row[bmi] != "." else None
     demographic_bmi_percent = (
         demographic_row[bmi_percentile]
@@ -165,6 +185,8 @@ for i in range(len(all_output_rows_df.index)):
         demographic_row[age],
         demographic_bmi,
         demographic_bmi_percent,
+        weight_row[weight] * kg_per_lb,  # convert from lb to kg
+        selected_row[tdd] / (weight_row[weight] * kg_per_lb),  # TDD per kg
         selected_row[issue_report_date],
     ]
 
@@ -183,7 +205,7 @@ print(
         num_without_demographics, num_files
     )
 )
-print(annotated_issue_reports_df.head())
+print("Skipped {}/{} files due to no weight data".format(num_without_weight, num_files))
 
 export(all_output_rows_df, "all_selected_rows")
 export(annotated_issue_reports_df, "aggregated_rows_per_patient")
