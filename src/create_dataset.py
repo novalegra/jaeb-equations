@@ -107,7 +107,7 @@ for i, file_path in enumerate(all_patient_files):
     elif best_rows.iloc[0][days_carbs] < 14:
         print(
             "Skipping file at {} due to only {} days of carb data".format(
-                best_rows.iloc[0][days_carbs]
+                file_path, best_rows.iloc[0][days_carbs]
             )
         )
         num_skipped_lack_carbs += 1
