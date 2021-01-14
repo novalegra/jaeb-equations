@@ -33,6 +33,7 @@ percent_cgm = "percent_cgm_available"
 issue_report_date = "issue_report_date"
 loop_id = "loop_id"
 percent_true = "percent_true_over_outcome"
+days_carbs = "days_carb_data"
 
 # From the survey data
 bmi = "BMI"
@@ -69,14 +70,23 @@ aggregate_output_rows.extend(
 
 analysis_name = "make_dataset"
 all_patient_files = glob.glob(
-    os.path.join("..", "jaeb-analysis", "data", ".PHI", "*LOOP*",)
+    os.path.join(
+        "..",
+        "jaeb-analysis",
+        ".reports",
+        "carb_annotated",
+        "make_dataset-2021_01_14_16-v0_1-12b9047",
+        "dataset-creation",
+        "*LOOP*",
+    )
 )
 
 all_output_rows_df = None
 num_skipped_lack_cgm = 0
+num_skipped_lack_carbs = 0
 
-for file_path in all_patient_files:
-    print("Loading file at {}".format(file_path))
+for i, file_path in enumerate(all_patient_files):
+    print("Loading file at {} ({}/{})".format(file_path, i + 1, len(all_patient_files)))
     df = pd.read_csv(file_path)
 
     # Initialize our df using the column data from our first file
@@ -85,7 +95,7 @@ for file_path in all_patient_files:
 
     df.dropna(subset=rows_without_demographic_data)
 
-    # Select the row that highest chance Loop was running for a long time
+    # Select the row that has the highest chance Loop was running for a long time
     best_rows = df[(df[percent_cgm] == df[percent_cgm].max()) & (df[percent_cgm] >= 90)]
 
     if len(best_rows.index) < 1:
@@ -93,6 +103,14 @@ for file_path in all_patient_files:
             "Skipping file at {} due to no rows with >= 90% CGM data".format(file_path)
         )
         num_skipped_lack_cgm += 1
+        continue
+    elif best_rows.iloc[0][days_carbs] < 14:
+        print(
+            "Skipping file at {} due to only {} days of carb data".format(
+                best_rows.iloc[0][days_carbs]
+            )
+        )
+        num_skipped_lack_carbs += 1
         continue
 
     all_output_rows_df = all_output_rows_df.append(best_rows.iloc[0], ignore_index=True)
@@ -173,6 +191,7 @@ for i in range(len(all_output_rows_df.index)):
         selected_row[tdd],
         selected_row[total_daily_basal],
         selected_row[total_daily_carbs],
+        selected_row[days_carbs],
         selected_row[isf],
         selected_row[icr],
         selected_row[percent_below_40],
@@ -198,6 +217,11 @@ num_files = len(all_patient_files)
 print(
     "Skipped {}/{} files due to lack of CGM data".format(
         num_skipped_lack_cgm, num_files
+    )
+)
+print(
+    "Skipped {}/{} files due to lack of carb data".format(
+        num_skipped_lack_carbs, num_files
     )
 )
 print(
