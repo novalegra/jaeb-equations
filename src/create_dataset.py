@@ -52,6 +52,7 @@ rows_without_demographic_data = [
     tdd,
     total_daily_basal,
     total_daily_carbs,
+    days_carbs,
     isf,
     icr,
     percent_below_40,
@@ -75,7 +76,7 @@ all_patient_files = glob.glob(
         "jaeb-analysis",
         ".reports",
         "carb_annotated",
-        "make_dataset-2021_01_14_16-v0_1-12b9047",
+        "make_dataset-2021_01_14_22-v0_1-ea94b2a",
         "dataset-creation",
         "*LOOP*",
     )
