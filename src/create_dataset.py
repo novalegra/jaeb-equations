@@ -40,9 +40,12 @@ bmi = "BMI"
 bmi_percentile = "BMIPercentile"
 age = "Age"
 weight = "weight"
+height_ft = "height_feet"
+height_in = "height_inches"
 
 # Computed
 kg_per_lb = 0.453592
+in_per_ft = 12
 tdd_per_kg = "tdd_per_kg"
 
 rows_without_demographic_data = [
@@ -178,7 +181,11 @@ for i in range(len(all_output_rows_df.index)):
 
     demographic_row = demographics_rows.iloc[0]
     weight_row = weight_rows.iloc[0]
-    demographic_bmi = demographic_row[bmi] if demographic_row[bmi] != "." else None
+    overall_height = weight_row[height_ft] * in_per_ft + weight_row[height_in]
+    bmi_from_tp_survey = round((weight_row[weight] * 703) / (overall_height ** 2), 4)
+    demographic_bmi = (
+        demographic_row[bmi] if demographic_row[bmi] != "." else bmi_from_tp_survey
+    )
     demographic_bmi_percent = (
         demographic_row[bmi_percentile]
         if demographic_row[bmi_percentile] != "."
