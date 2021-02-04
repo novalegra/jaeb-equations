@@ -4,7 +4,7 @@ import utils
 import numpy as np
 
 input_file_name = (
-    "processed-30-min-win_aggregated_rows_per_patient_2021_01_09_01-v0_1-50aca7a"
+    "processed-30-min-win_aggregated_rows_per_patient_2021_02_02_22-v0_1-a6ecc3c"
 )
 data_path = utils.find_full_path(input_file_name, ".csv")
 df = pd.read_csv(data_path, index_col=0)
@@ -98,7 +98,7 @@ column_labels = np.append(
     aspirational_overall.drop(columns=y_cols).columns.values, y_cols,
 )
 print("Train: {} reports".format(len(combined_train)))
-print("Test: {} reports".format(len(combined_test)))
+print("Reserved Final Test: {} reports".format(len(combined_test)))
 
 # Reserve a stratified 'percent_test_data' of data for final testing
 export(utils.numpy_to_pandas(column_labels, combined_train), "train")
