@@ -17,6 +17,8 @@ export all rows
 """
 
 # From the individual issue report data
+day = "date"
+scheduled_basal_rate = "basal_rate"
 tdd = "avg_total_insulin_per_day_outcomes"
 total_daily_basal = "avg_basal_insulin_per_day_outcomes"  # Total daily basal
 total_daily_carbs = "avg_carbs_per_day_outcomes"  # Total daily CHO
@@ -46,6 +48,7 @@ height_in = "height_inches"
 # Computed
 kg_per_lb = 0.453592
 in_per_ft = 12
+total_daily_scheduled_basal = "total_daily_scheduled_basal"
 tdd_per_kg = "tdd_per_kg"
 
 rows_without_demographic_data = [
@@ -69,7 +72,15 @@ rows_without_demographic_data = [
 
 aggregate_output_rows = rows_without_demographic_data.copy()
 aggregate_output_rows.extend(
-    [age, bmi, bmi_percentile, weight, tdd_per_kg, issue_report_date]
+    [
+        total_daily_scheduled_basal,
+        age,
+        bmi,
+        bmi_percentile,
+        weight,
+        tdd_per_kg,
+        issue_report_date,
+    ]
 )
 
 analysis_name = "make_dataset"
@@ -95,6 +106,7 @@ for i, file_path in enumerate(all_patient_files):
 
     # Initialize our df using the column data from our first file
     if all_output_rows_df is None:
+        df[total_daily_scheduled_basal] = -1
         all_output_rows_df = pd.DataFrame(columns=df.columns)
 
     df.dropna(subset=rows_without_demographic_data)
@@ -116,8 +128,12 @@ for i, file_path in enumerate(all_patient_files):
         )
         num_skipped_lack_carbs += 1
         continue
-
-    all_output_rows_df = all_output_rows_df.append(best_rows.iloc[0], ignore_index=True)
+    row = best_rows.iloc[0]
+    # Divide by 2 because windows are half-hourly
+    row[total_daily_scheduled_basal] = (
+        df.groupby([day])[scheduled_basal_rate].sum()[0] / 2
+    )
+    all_output_rows_df = all_output_rows_df.append(row, ignore_index=True)
 
 short_file_name = "processed-30-min-win"
 
@@ -209,6 +225,7 @@ for i in range(len(all_output_rows_df.index)):
         selected_row[percent_above_180],
         selected_row[percent_above_250],
         selected_row[percent_above_400],
+        selected_row[total_daily_scheduled_basal],
         demographic_row[age],
         demographic_bmi,
         demographic_bmi_percent,
