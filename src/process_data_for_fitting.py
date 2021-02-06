@@ -29,7 +29,7 @@ def export(dataframe, df_descriptor, short_file_name="processed-aspirational"):
 
 
 tdd = "avg_total_insulin_per_day_outcomes"
-basal = "avg_basal_insulin_per_day_outcomes"  # Total daily basal
+basal = "total_daily_scheduled_basal"  # Total daily basal
 total_daily_carbs = "avg_carbs_per_day_outcomes"  # Total daily CHO
 isf = "avg_isf"
 icr = "weighted_cir_outcomes"
