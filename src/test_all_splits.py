@@ -25,4 +25,5 @@ for file_number in range(1, num_splits + 1):
 
     # This will output the results to a file
     run_equation_testing(matching_name, jaeb, traditional)
+    print("Finished equation testing for split {}".format(file_number))
 

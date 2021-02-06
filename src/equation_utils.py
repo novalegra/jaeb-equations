@@ -5,8 +5,7 @@ def jaeb_basal_equation(tdd, carbs):
     """ Basal equation fitted from Jaeb data """
     a = -0.36542
     b = -0.0019846
-    # TODO: ask Rayhan about ln
-    return a * tdd * math.exp(b * carbs)
+    return math.exp(a) * tdd * math.exp(b * carbs)
 
 
 def traditional_basal_equation(tdd):
@@ -20,7 +19,7 @@ def jaeb_isf_equation(tdd, bmi):
     a = 11.612
     b = -0.47864
     c = -1.9088
-    return (10 ** a) * (tdd ** b) * (bmi ** c)
+    return math.exp(a) * (tdd ** b) * (bmi ** c)
 
 
 def traditional_isf_equation(tdd):
