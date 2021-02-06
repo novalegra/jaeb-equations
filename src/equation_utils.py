@@ -3,29 +3,41 @@ import math
 
 def jaeb_basal_equation(tdd, carbs):
     """ Basal equation fitted from Jaeb data """
-    return 0.6507 * tdd * math.exp(-0.001498 * carbs)
+    a = -0.36542
+    b = -0.0019846
+    # TODO: ask Rayhan about ln
+    return a * tdd * math.exp(b * carbs)
 
 
 def traditional_basal_equation(tdd):
     """ Traditional basal equation """
-    return 0.5 * tdd
+    a = 0.5013
+    return a * tdd
 
 
 def jaeb_isf_equation(tdd, bmi):
     """ ISF equation fitted from Jaeb data """
-    return 40250 / (tdd * bmi)
+    a = 11.612
+    b = -0.47864
+    c = -1.9088
+    return (10 ** a) * (tdd ** b) * (bmi ** c)
 
 
 def traditional_isf_equation(tdd):
     """ Traditional ISF equation """
-    return 1500 / tdd
+    a = 1900.4
+    return a / tdd
 
 
 def jaeb_icr_equation(tdd, carbs):
     """ ICR equation fitted from Jaeb data """
-    return (1.31 * carbs + 136.3) / tdd
+    a = 0.32798
+    b = 61.542
+    c = -0.68226
+    return (a * carbs + b) * (tdd ** c)
 
 
 def traditional_icr_equation(tdd):
     """ Traditional ICR equation """
-    return 500 / tdd
+    a = 295.3
+    return a / tdd
