@@ -28,54 +28,15 @@ def run_equation_testing(input_file_name, jaeb_equations, traditional_equations)
     analysis_name = "evaluate-equations"
 
     # Keys for working with Jaeb exports
-    tdd_key = "total_daily_dose_avg"
-    basal_key = "total_daily_basal_insulin_avg"  # Total daily basal
-    carb_key = "total_daily_carb_avg"  # Total daily CHO
-    bmi_key = "bmi_at_baseline"
-    bmi_percentile = "bmi_perc_at_baseline"
-    isf_key = "isf"
-    icr_key = "carb_ratio"
-    age_key = "age_at_baseline"
-    tir_key = "percent_70_180_2week"
-
-    percent_cgm_available = "percent_cgm_available_2week"
-    below_40 = "percent_below_40_2week"
-    below_54 = "percent_below_54_2week"
-    percent_70_180 = "percent_70_180_2week"
-    days_insulin = "days_with_insulin"
-
-    # Filter to make sure basals are reasonable
-    df = df[(df[basal_key] > 1)]
-
-    # Filter for aspirational
-    # df = df[
-    #     (df[basal_key] > 1)
-    #     # Normal weight
-    #     & (df[bmi_key] < 25)
-    #     & (df[bmi_key] >= 18.5)
-    #     # Enough data to evaluate
-    #     & (df[percent_cgm_available] >= 90)
-    #     & (df[days_insulin] >= 14)
-    #     # Good CGM distributions
-    #     & (df[below_40] == 0)
-    #     & (df[below_54] < 1)
-    #     & (df[percent_70_180] >= 70)
-    # ]
-
-    # Non-Aspirational
-    # df = df[
-    #     (df[basal_key] > 1)
-    #     # Normal weight
-    #     | (df[bmi_key] >= 25)
-    #     | (df[bmi_key] < 18.5)
-    #     # Enough data to evaluate
-    #     | (df[percent_cgm_available] >= 90)
-    #     | (df[days_insulin] >= 14)
-    #     # Good CGM distributions
-    #     | (df[below_40] != 0)
-    #     | (df[below_54] >= 1)
-    #     | (df[percent_70_180] <= 70)
-    # ]
+    tdd_key = "avg_total_insulin_per_day_outcomes"
+    basal_key = "total_daily_scheduled_basal"  # Total daily basal
+    carb_key = "avg_carbs_per_day_outcomes"  # Total daily CHO
+    bmi_key = "BMI"
+    bmi_percentile = "BMIPercentile"
+    isf_key = "avg_isf"
+    icr_key = "weighted_cir_outcomes"
+    tir_key = "percent_70_180"
+    age_key = "Age"
 
     """ Basal Analysis """
     df["jaeb_predicted_basals"] = df.apply(
@@ -210,20 +171,20 @@ def run_equation_testing(input_file_name, jaeb_equations, traditional_equations)
     )
 
 
-if __name__ == "__main__":
-    jaeb = PumpSettings(
-        equation_utils.jaeb_basal_equation,
-        equation_utils.jaeb_isf_equation,
-        equation_utils.jaeb_icr_equation,
-    )
+# if __name__ == "__main__":
+#     jaeb = PumpSettings(
+#         equation_utils.jaeb_basal_equation,
+#         equation_utils.jaeb_isf_equation,
+#         equation_utils.jaeb_icr_equation,
+#     )
 
-    traditional = PumpSettings(
-        equation_utils.traditional_basal_equation,
-        equation_utils.traditional_isf_equation,
-        equation_utils.traditional_icr_equation,
-    )
+#     traditional = PumpSettings(
+#         equation_utils.traditional_basal_equation,
+#         equation_utils.traditional_isf_equation,
+#         equation_utils.traditional_icr_equation,
+#     )
 
-    run_equation_testing(
-        "test_1_adult_aspirational_2020_10_11_01-v0_1-1635e10", jaeb, traditional
-    )
+#     run_equation_testing(
+#         "test_1_adult_aspirational_2020_10_11_01-v0_1-1635e10", jaeb, traditional
+#     )
 
