@@ -31,8 +31,8 @@ def traditional_isf_equation(tdd):
 def jaeb_icr_equation(tdd, carbs):
     """ ICR equation fitted from Jaeb data """
     a = 0.32798
-    b = 61.542
-    c = -0.68226
+    b = 61.512
+    c = -0.6818
     return (a * carbs + b) * (tdd ** c)
 
 
