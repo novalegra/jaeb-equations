@@ -238,6 +238,10 @@ for i in range(len(all_output_rows_df.index)):
         len(annotated_issue_reports_df.index)
     ] = simplified_row
 
+    all_output_rows_df.loc[i, bmi] = demographic_bmi
+    all_output_rows_df.loc[i, age] = demographic_row[age]
+    all_output_rows_df.loc[i, bmi_percentile] = demographic_bmi_percent
+
 num_files = len(all_patient_files)
 print(
     "Skipped {}/{} files due to lack of CGM data".format(
