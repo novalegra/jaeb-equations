@@ -7,6 +7,7 @@ analysis_name = "make_dataset"
 all_patient_files = glob.glob(
     os.path.join("..", "jaeb-analysis", "data", ".PHI", "*LOOP*",)
 )
+print("Processing {} files".format(len(all_patient_files)))
 
 carbs_per_chunk = "n_carbs_in_chunk"
 date = "date"
