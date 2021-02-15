@@ -1,7 +1,7 @@
 import pandas as pd
 import utils
 
-distribution_stats = ["mean", "std", "min", "25%", "75%", "max"]
+distribution_stats = ["mean", "std", "min", "25%", "50%", "75%", "max"]
 analysis_name = "analyze-distributions"
 
 # Keys for non-metabolic settings
@@ -23,30 +23,32 @@ icr = "weighted_cir_outcomes"
 
 
 file_names = [
-    "test_1_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
-    "test_2_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
-    "test_3_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
-    "test_4_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
-    "test_5_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
-    "train_1_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
-    "train_2_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
-    "train_3_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
-    "train_4_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
-    "train_5_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    "processed-aspirational_overall_2021_02_15_20-v0_1-9eea51f"
+    # "test_1_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    # "test_2_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    # "test_3_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    # "test_4_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    # "test_5_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    # "train_1_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    # "train_2_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    # "train_3_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    # "train_4_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
+    # "train_5_overall_aspirational_2021_02_04_22-v0_1-4d1a82f",
 ]
 
 
 def get_and_export_settings(df, file_name):
-    keys = [bmi, bmi_percentile, age, tdd, basal, total_daily_carbs, isf, icr]
-
-    # keys = [suspend_threshold, correction_lower, correction_upper, max_basal, max_bolus]
+    # For settings we're 'fitting'
+    # keys = [bmi, bmi_percentile, age, tdd, basal, total_daily_carbs, isf, icr]
+    # For non-metabolic settings
+    keys = [suspend_threshold, correction_lower, correction_upper, max_basal, max_bolus]
 
     # Filter out unreasonable settings
-    # df = df[
-    #     (df[suspend_threshold] > 10)
-    #     & (df[correction_lower] > 10)
-    #     & (df[correction_upper] > 10)
-    # ]
+    df = df[
+        (df[suspend_threshold] > 10)
+        & (df[correction_lower] > 10)
+        & (df[correction_upper] > 10)
+    ]
 
     output_df = pd.DataFrame(columns=distribution_stats)
 
@@ -55,7 +57,7 @@ def get_and_export_settings(df, file_name):
         row = []
         distribution = df[key].describe(include="all")
         for stat in distribution_stats:
-            row.append(distribution.loc[stat])
+            row.append(round(distribution.loc[stat], 2))
 
         if len(row) == len(distribution_stats):
             output_df.loc[key] = row
