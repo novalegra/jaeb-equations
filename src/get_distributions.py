@@ -1,7 +1,7 @@
 import pandas as pd
 import utils
 
-file_name = "processed-30-min-win_all_selected_rows_2021_02_04_22-v0_1-4d1a82f"
+file_name = "processed-30-min-win_all_selected_rows_2021_02_14_23-v0_1-b8c3222"
 data_path = utils.find_full_path(file_name, ".csv")
 df = pd.read_csv(data_path)
 
@@ -17,6 +17,13 @@ max_basal = "maximum_basal_rate"
 max_bolus = "maximum_bolus"
 
 keys = [suspend_threshold, correction_lower, correction_upper, max_basal, max_bolus]
+
+# Filter out unreasonable settings
+df = df[
+    (df[suspend_threshold] > 10)
+    & (df[correction_lower] > 10)
+    & (df[correction_upper] > 10)
+]
 
 """ Print out distributions for all the different columns """
 for key in keys:
