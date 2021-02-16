@@ -11,11 +11,17 @@ jaeb = PumpSettings(
     equation_utils.jaeb_icr_equation,
 )
 
-traditional = PumpSettings(
+traditional_fitted = PumpSettings(
     equation_utils.traditional_basal_equation,
     equation_utils.traditional_isf_equation,
     equation_utils.traditional_icr_equation,
 )
 
+traditional_constants = PumpSettings(
+    equation_utils.traditional_constants_basal_equation,
+    equation_utils.traditional_constants_isf_equation,
+    equation_utils.traditional_constants_icr_equation,
+)
+
 # This will output the results to a file
-run_equation_testing(input_file, jaeb, traditional)
+run_equation_testing(input_file, jaeb, traditional_fitted, traditional_constants)

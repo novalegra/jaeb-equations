@@ -17,13 +17,19 @@ for file_number in range(1, num_splits + 1):
         equation_utils.jaeb_icr_equation,
     )
 
-    traditional = PumpSettings(
+    traditional_fitted = PumpSettings(
         equation_utils.traditional_basal_equation,
         equation_utils.traditional_isf_equation,
         equation_utils.traditional_icr_equation,
     )
 
+    traditional_constants = PumpSettings(
+        equation_utils.traditional_constants_basal_equation,
+        equation_utils.traditional_constants_isf_equation,
+        equation_utils.traditional_constants_icr_equation,
+    )
+
     # This will output the results to a file
-    run_equation_testing(matching_name, jaeb, traditional)
+    run_equation_testing(matching_name, jaeb, traditional_fitted, traditional_constants)
     print("Finished equation testing for split {}".format(file_number))
 

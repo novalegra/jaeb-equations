@@ -9,8 +9,14 @@ def jaeb_basal_equation(tdd, carbs):
 
 
 def traditional_basal_equation(tdd):
-    """ Traditional basal equation """
+    """ Traditional basal equation with constants fit to Jaeb dataset """
     a = 0.5013
+    return a * tdd
+
+
+def traditional_constants_basal_equation(tdd):
+    """ Traditional basal equation with constants from ACE consensus """
+    a = 0.5
     return a * tdd
 
 
@@ -23,8 +29,14 @@ def jaeb_isf_equation(tdd, bmi):
 
 
 def traditional_isf_equation(tdd):
-    """ Traditional ISF equation """
+    """ Traditional ISF equation with constants fit to Jaeb dataset """
     a = 1900.4
+    return a / tdd
+
+
+def traditional_constants_isf_equation(tdd):
+    """ Traditional ISF equation with constants from ACE consensus """
+    a = 1700
     return a / tdd
 
 
@@ -37,6 +49,12 @@ def jaeb_icr_equation(tdd, carbs):
 
 
 def traditional_icr_equation(tdd):
-    """ Traditional ICR equation """
+    """ Traditional ICR equation with constants fit to Jaeb dataset """
     a = 295.3
+    return a / tdd
+
+
+def traditional_constants_icr_equation(tdd):
+    """ Traditional ICR equation with constants from ACE consensus """
+    a = 450
     return a / tdd
