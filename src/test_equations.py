@@ -8,9 +8,9 @@ from sklearn.metrics import median_absolute_error, r2_score, mean_squared_error
 
 def compute_statistics(y_true, y_predicted):
     # Returns MAE, R^2, and RMSE values
-    mae = median_absolute_error(y_true, y_predicted)
-    r_squared = r2_score(y_true, y_predicted)
-    rmse = mean_squared_error(y_true, y_predicted) ** 0.5
+    mae = round(median_absolute_error(y_true, y_predicted), 2)
+    r_squared = round(r2_score(y_true, y_predicted), 2)
+    rmse = round(mean_squared_error(y_true, y_predicted) ** 0.5, 2)
     return (mae, r_squared, rmse)
 
 
@@ -136,23 +136,24 @@ def run_equation_testing(
         *traditional_constants_icr_stats,
     ]
 
-    output_df["jaeb_vs_fitted_mae_dif"] = (
-        output_df["jaeb_mae"] - output_df["traditional_fitted_mae"]
+    output_df["jaeb_vs_fitted_mae_dif"] = round(
+        output_df["jaeb_mae"] - output_df["traditional_fitted_mae"], 2
     )
-    output_df["jaeb_vs_fitted_r_2_dif"] = (
-        output_df["jaeb_r_2"] - output_df["traditional_fitted_r_2"]
+    output_df["jaeb_vs_fitted_r_2_dif"] = round(
+        output_df["jaeb_r_2"] - output_df["traditional_fitted_r_2"], 2
     )
-    output_df["jaeb_vs_fitted_rmse_dif"] = (
-        output_df["jaeb_rmse"] - output_df["traditional_fitted_rmse"]
+    output_df["jaeb_vs_fitted_rmse_dif"] = round(
+        output_df["jaeb_rmse"] - output_df["traditional_fitted_rmse"], 2
     )
-    output_df["fitted_vs_constants_mae_dif"] = (
-        output_df["traditional_fitted_mae"] - output_df["traditional_constants_mae"]
+    output_df["fitted_vs_constants_mae_dif"] = round(
+        output_df["traditional_fitted_mae"] - output_df["traditional_constants_mae"], 2
     )
-    output_df["fitted_vs_constants_r_2_dif"] = (
-        output_df["traditional_fitted_r_2"] - output_df["traditional_constants_r_2"]
+    output_df["fitted_vs_constants_r_2_dif"] = round(
+        output_df["traditional_fitted_r_2"] - output_df["traditional_constants_r_2"], 2
     )
-    output_df["fitted_vs_constants_rmse_dif"] = (
-        output_df["traditional_fitted_rmse"] - output_df["traditional_constants_rmse"]
+    output_df["fitted_vs_constants_rmse_dif"] = round(
+        output_df["traditional_fitted_rmse"] - output_df["traditional_constants_rmse"],
+        2,
     )
 
     short_file_name = (
