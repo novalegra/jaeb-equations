@@ -163,7 +163,7 @@ def run_equation_testing(
         utils.get_save_path_with_file(
             input_file_name,
             analysis_name,
-            short_file_name + "_equation_errors.csv",
+            short_file_name + "_equation_errors_" + utils.get_file_stamps()[0] + ".csv",
             "data-analysis",
         )
     )
@@ -172,7 +172,10 @@ def run_equation_testing(
         utils.get_save_path_with_file(
             input_file_name,
             analysis_name,
-            short_file_name + "_with_equation_predictions.csv",
+            short_file_name
+            + "_with_equation_predictions_"
+            + utils.get_file_stamps()[0]
+            + ".csv",
             "data-analysis",
         )
     )
