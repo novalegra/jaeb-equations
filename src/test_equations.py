@@ -1,10 +1,25 @@
 import pandas as pd
 import utils
 import equation_utils
+
 from pumpsettings import PumpSettings
+from sklearn.metrics import median_absolute_error, r2_score, mean_squared_error
 
 
-def run_equation_testing(input_file_name, jaeb_equations, traditional_equations):
+def compute_statistics(y_true, y_predicted):
+    # Returns MAE, R^2, and RMSE values
+    mae = median_absolute_error(y_true, y_predicted)
+    r_squared = r2_score(y_true, y_predicted)
+    rmse = mean_squared_error(y_true, y_predicted) ** 0.5
+    return (mae, r_squared, rmse)
+
+
+def run_equation_testing(
+    input_file_name,
+    jaeb_equations,
+    traditional_fitted_equations,
+    traditional_constant_equations,
+):
     """
     Run equation testing, using the equations from an equation dict
     input_file_name: name of file, without extension
@@ -15,14 +30,15 @@ def run_equation_testing(input_file_name, jaeb_equations, traditional_equations)
     data_path = utils.find_full_path(input_file_name, ".csv")
     df = pd.read_csv(data_path)
     result_cols = [
-        "jaeb_aic",
-        "traditional_aic",
+        "jaeb_mae",
+        "jaeb_r_2",
         "jaeb_rmse",
-        "traditional_rmse",
-        "jaeb_sse",
-        "traditional_sse",
-        "jaeb_bic",
-        "traditional_bic",
+        "traditional_fitted_mae",
+        "traditional_fitted_r_2",
+        "traditional_fitted_rmse",
+        "traditional_constants_mae",
+        "traditional_constants_r_2",
+        "traditional_constants_rmse",
     ]
     output_df = pd.DataFrame(columns=result_cols)
     analysis_name = "evaluate-equations"
@@ -42,112 +58,102 @@ def run_equation_testing(input_file_name, jaeb_equations, traditional_equations)
     df["jaeb_predicted_basals"] = df.apply(
         lambda x: jaeb_equations.basal_equation(x[tdd_key], x[carb_key]), axis=1
     )
-    df["traditional_predicted_basals"] = df.apply(
-        lambda x: traditional_equations.basal_equation(x[tdd_key]), axis=1
+    df["traditional_fitted_predicted_basals"] = df.apply(
+        lambda x: traditional_fitted_equations.basal_equation(x[tdd_key]), axis=1
+    )
+    df["traditional_constants_predicted_basals"] = df.apply(
+        lambda x: traditional_constant_equations.basal_equation(x[tdd_key]), axis=1
     )
 
-    df["jaeb_basal_residual"] = df[basal_key] - df["jaeb_predicted_basals"]
-    df["traditional_basal_residual"] = (
-        df[basal_key] - df["traditional_predicted_basals"]
+    jaeb_basal_stats = compute_statistics(df[basal_key], df["jaeb_predicted_basals"])
+    traditional_fitted_basal_stats = compute_statistics(
+        df[basal_key], df["traditional_fitted_predicted_basals"]
     )
-
-    jaeb_basal_sum_squared_errors = sum(df["jaeb_basal_residual"] ** 2)
-    traditional_basal_sum_squared_errors = sum(df["traditional_basal_residual"] ** 2)
-
-    jaeb_basal_aic, jaeb_basal_bic = utils.aic_bic(
-        df.shape[0], 2, jaeb_basal_sum_squared_errors, df["jaeb_basal_residual"].std()
-    )
-    traditional_basal_aic, traditional_basal_bic = utils.aic_bic(
-        df.shape[0],
-        1,
-        traditional_basal_sum_squared_errors,
-        df["traditional_basal_residual"].std(),
+    traditional_constants_basal_stats = compute_statistics(
+        df[basal_key], df["traditional_constants_predicted_basals"]
     )
 
     output_df.loc["Basal"] = [
-        jaeb_basal_aic,
-        traditional_basal_aic,
-        (jaeb_basal_sum_squared_errors / df.shape[0]) ** 0.5,
-        (traditional_basal_sum_squared_errors / df.shape[0]) ** 0.5,
-        jaeb_basal_sum_squared_errors,
-        traditional_basal_sum_squared_errors,
-        jaeb_basal_bic,
-        traditional_basal_bic,
+        *jaeb_basal_stats,
+        *traditional_fitted_basal_stats,
+        *traditional_constants_basal_stats,
     ]
 
     """ ISF Analysis """
     df["jaeb_predicted_isf"] = df.apply(
         lambda x: jaeb_equations.isf_equation(x[tdd_key], x[bmi_key]), axis=1
     )
-    df["traditional_predicted_isf"] = df.apply(
-        lambda x: traditional_equations.isf_equation(x[tdd_key]), axis=1
+    df["traditional_fitted_predicted_isf"] = df.apply(
+        lambda x: traditional_fitted_equations.isf_equation(x[tdd_key]), axis=1
     )
-    df = df.dropna(subset=["jaeb_predicted_isf", "traditional_predicted_isf"])
-
-    df["jaeb_isf_residual"] = df[isf_key] - df["jaeb_predicted_isf"]
-    df["traditional_isf_residual"] = df[isf_key] - df["traditional_predicted_isf"]
-
-    jaeb_isf_sum_squared_errors = sum(df["jaeb_isf_residual"] ** 2)
-    traditional_isf_sum_squared_errors = sum(df["traditional_isf_residual"] ** 2)
-
-    jaeb_isf_aic, jaeb_isf_bic = utils.aic_bic(
-        df.shape[0], 2, jaeb_isf_sum_squared_errors, df["jaeb_isf_residual"].std()
+    df["traditional_constants_predicted_isf"] = df.apply(
+        lambda x: traditional_constant_equations.isf_equation(x[tdd_key]), axis=1
     )
-    traditional_isf_aic, traditional_isf_bic = utils.aic_bic(
-        df.shape[0],
-        1,
-        traditional_isf_sum_squared_errors,
-        df["traditional_isf_residual"].std(),
+    df = df.dropna(
+        subset=[
+            "jaeb_predicted_isf",
+            "traditional_fitted_predicted_isf",
+            "traditional_constants_predicted_isf",
+        ]
+    )
+
+    jaeb_isf_stats = compute_statistics(df[isf_key], df["jaeb_predicted_isf"])
+    traditional_fitted_isf_stats = compute_statistics(
+        df[isf_key], df["traditional_fitted_predicted_isf"]
+    )
+    traditional_constants_isf_stats = compute_statistics(
+        df[isf_key], df["traditional_constants_predicted_isf"]
     )
 
     output_df.loc["ISF"] = [
-        jaeb_isf_aic,
-        traditional_isf_aic,
-        (jaeb_isf_sum_squared_errors / df.shape[0]) ** 0.5,
-        (traditional_isf_sum_squared_errors / df.shape[0]) ** 0.5,
-        jaeb_isf_sum_squared_errors,
-        traditional_isf_sum_squared_errors,
-        jaeb_isf_bic,
-        traditional_isf_bic,
+        *jaeb_isf_stats,
+        *traditional_fitted_isf_stats,
+        *traditional_constants_isf_stats,
     ]
 
     """ ICR Analysis """
     df["jaeb_predicted_icr"] = df.apply(
         lambda x: jaeb_equations.icr_equation(x[tdd_key], x[carb_key]), axis=1
     )
-    df["traditional_predicted_icr"] = df.apply(
-        lambda x: traditional_equations.icr_equation(x[tdd_key]), axis=1
+    df["traditional_fitted_predicted_icr"] = df.apply(
+        lambda x: traditional_fitted_equations.icr_equation(x[tdd_key]), axis=1
+    )
+    df["traditional_constants_predicted_icr"] = df.apply(
+        lambda x: traditional_constant_equations.icr_equation(x[tdd_key]), axis=1
     )
 
-    df["jaeb_icr_residual"] = df[icr_key] - df["jaeb_predicted_icr"]
-    df["traditional_icr_residual"] = df[icr_key] - df["traditional_predicted_icr"]
-
-    jaeb_icr_sum_squared_errors = sum(df["jaeb_icr_residual"] ** 2)
-    traditional_icr_sum_squared_errors = sum(df["traditional_icr_residual"] ** 2)
-
-    jaeb_icr_aic, jaeb_icr_bic = utils.aic_bic(
-        df.shape[0], 2, jaeb_icr_sum_squared_errors, df["jaeb_icr_residual"].std()
+    jaeb_icr_stats = compute_statistics(df[icr_key], df["jaeb_predicted_icr"])
+    traditional_fitted_icr_stats = compute_statistics(
+        df[icr_key], df["traditional_fitted_predicted_icr"]
     )
-    traditional_icr_aic, traditional_icr_bic = utils.aic_bic(
-        df.shape[0],
-        1,
-        traditional_icr_sum_squared_errors,
-        df["traditional_icr_residual"].std(),
+    traditional_constants_icr_stats = compute_statistics(
+        df[icr_key], df["traditional_constants_predicted_icr"]
     )
 
     output_df.loc["ICR"] = [
-        jaeb_icr_aic,
-        traditional_icr_aic,
-        (jaeb_icr_sum_squared_errors / df.shape[0]) ** 0.5,
-        (traditional_icr_sum_squared_errors / df.shape[0]) ** 0.5,
-        jaeb_icr_sum_squared_errors,
-        traditional_icr_sum_squared_errors,
-        jaeb_icr_bic,
-        traditional_icr_bic,
+        *jaeb_icr_stats,
+        *traditional_fitted_icr_stats,
+        *traditional_constants_icr_stats,
     ]
 
-    output_df["aic_dif"] = output_df["jaeb_aic"] - output_df["traditional_aic"]
-    output_df["bic_dif"] = output_df["jaeb_bic"] - output_df["traditional_bic"]
+    output_df["jaeb_vs_fitted_mae_dif"] = (
+        output_df["jaeb_mae"] - output_df["traditional_fitted_mae"]
+    )
+    output_df["jaeb_vs_fitted_r_2_dif"] = (
+        output_df["jaeb_r_2"] - output_df["traditional_fitted_r_2"]
+    )
+    output_df["jaeb_vs_fitted_rmse_dif"] = (
+        output_df["jaeb_rmse"] - output_df["traditional_fitted_rmse"]
+    )
+    output_df["fitted_vs_constants_mae_dif"] = (
+        output_df["traditional_fitted_mae"] - output_df["traditional_constants_mae"]
+    )
+    output_df["fitted_vs_constants_r_2_dif"] = (
+        output_df["traditional_fitted_r_2"] - output_df["traditional_constants_r_2"]
+    )
+    output_df["fitted_vs_constants_rmse_dif"] = (
+        output_df["traditional_fitted_rmse"] - output_df["traditional_constants_rmse"]
+    )
 
     short_file_name = (
         input_file_name[0:10] if len(input_file_name) > 10 else input_file_name
@@ -169,22 +175,4 @@ def run_equation_testing(input_file_name, jaeb_equations, traditional_equations)
             "data-analysis",
         )
     )
-
-
-# if __name__ == "__main__":
-#     jaeb = PumpSettings(
-#         equation_utils.jaeb_basal_equation,
-#         equation_utils.jaeb_isf_equation,
-#         equation_utils.jaeb_icr_equation,
-#     )
-
-#     traditional = PumpSettings(
-#         equation_utils.traditional_basal_equation,
-#         equation_utils.traditional_isf_equation,
-#         equation_utils.traditional_icr_equation,
-#     )
-
-#     run_equation_testing(
-#         "test_1_adult_aspirational_2020_10_11_01-v0_1-1635e10", jaeb, traditional
-#     )
 
