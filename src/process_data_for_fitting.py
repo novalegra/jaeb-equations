@@ -3,9 +3,7 @@ from sklearn.model_selection import train_test_split
 import utils
 import numpy as np
 
-input_file_name = (
-    "processed-30-min-win_aggregated_rows_per_patient_2021_02_02_22-v0_1-a6ecc3c"
-)
+input_file_name = "processed-30-min-win_all_selected_rows_2021_02_14_23-v0_1-b8c3222"
 data_path = utils.find_full_path(input_file_name, ".csv")
 df = pd.read_csv(data_path, index_col=0)
 analysis_name = "evaluate-equations"
