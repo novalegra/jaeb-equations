@@ -91,8 +91,9 @@ def three_dimension_plot(x, y, z, labels=["", "", ""], title=""):
     ax.set_ylabel(labels[1])
     ax.set_zlabel(labels[2])
 
-    plt.title(title, fontsize=30)
+    plt.title(title, fontsize=25)
     plt.show()
+    plt.clf()
 
 
 def plot_by_frequency(
@@ -107,19 +108,19 @@ def plot_by_frequency(
     should_export - set true to save the plot to png without plotting it
     """
     plt.hist(column, bins=bins)
-    plt.title(title, fontsize=30)
+    plt.title(title, fontsize=25)
     plt.xlabel(x_axis_label)
     plt.ylabel("Count of Occurrences")
     if x_lim:
         plt.xlim(x_lim[0], x_lim[1])
     if len(export_path) > 0:
         plt.savefig(export_path)
-        plt.clf()
     else:
         plt.show()
+    plt.clf()
 
 
-def two_dimension_plot(x, y, labels=["", ""], title="", ylim=None):
+def two_dimension_plot(x, y, labels=["", ""], title="", ylim=None, save=False):
     """
     Function to plot a 2D graph of data, with optional labels & a title
     """
@@ -134,8 +135,12 @@ def two_dimension_plot(x, y, labels=["", ""], title="", ylim=None):
     if ylim:
         axes.set_ylim(ylim)
 
-    plt.title(title, fontsize=30)
-    plt.show()
+    plt.title(title, fontsize=25)
+    if save:
+        plt.savefig(title + ".png")
+    else:
+        plt.show()
+    plt.clf()
 
 
 def log_likelihood(n, k, sum_squared_errors, std_dev):
