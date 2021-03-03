@@ -97,16 +97,25 @@ def three_dimension_plot(x, y, z, labels=["", "", ""], title=""):
 
 
 def plot_by_frequency(
-    column, title="", x_axis_label="", x_lim=None, bins=10, export_path=""
+    column,
+    title="",
+    x_axis_label="",
+    x_lim=None,
+    bins=10,
+    export_path="",
+    bin_width=None,
 ):
     """
     column - column to plot frequencies of
     title - title of plot
     x_axis_label - label of x axis
     x_lim - list of x limits in form [left, right]
-    bins - number of bins to group data into
+    bins - number of bins to group data into  [select 1 of bins or bin_width]
     should_export - set true to save the plot to png without plotting it
+    bin_width - number of entries in each bin, x_lim must be specified [select 1 of bins or bin_width]
     """
+    if bin_width and len(x_lim) == 2:
+        bins = round((max(column) - min(column)) / bin_width)
     plt.hist(column, bins=bins)
     plt.title(title, fontsize=25)
     plt.xlabel(x_axis_label)

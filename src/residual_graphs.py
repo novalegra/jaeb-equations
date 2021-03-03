@@ -36,7 +36,19 @@ age = "Age"
 def make_graph(y_true, y_predicted, axes_labels, title):
     residuals = (y_true - y_predicted) / y_predicted * 100
     utils.two_dimension_plot(
-        y_true, residuals, axes_labels, title, [-200, 200], save=should_save_graph,
+        y_true, residuals, axes_labels, title, [-100, 200], save=should_save_graph,
+    )
+    if should_save_graph:
+        export_path = "Histogram " + title + ".png"
+    else:
+        export_path = ""
+    utils.plot_by_frequency(
+        residuals,
+        title,
+        axes_labels[1],
+        [-100, 200],
+        bin_width=20,
+        export_path=export_path,
     )
 
 
