@@ -78,51 +78,6 @@ def filter_aspirational_data_without_weight(df, keys):
     ]
 
 
-def filter_data_for_equation_verification(df):
-    """
-    Filter to get data that's not ideal but close to it,
-    for the purpose of testing the equations
-    """
-    return df[
-        (df.age_at_baseline >= 18)
-        & (df.bmi_at_baseline > 18.5)
-        & (df.bmi_at_baseline < 25)
-        & (df.percent_cgm_available_2week >= 90)
-        & (df.percent_70_180_2week >= 70)
-        & (df.percent_below_54_2week > 1)
-        & (df.percent_below_54_2week < 1.5)
-        & (df.percent_below_40_2week == 0)
-        & (df.days_with_insulin >= 14)
-    ]
-
-
-def filter_data_for_peds_equation_verification(df):
-    """
-    Filter to get pediatric data that's not ideal but close to it,
-    for the purpose of testing the equations
-    """
-    df = df.dropna(subset=["basal_rate_schedule"])
-    return df[
-        (df.age_at_baseline < 18)
-        & (df.percent_cgm_available_2week >= 90)
-        & (df.percent_70_180_2week >= 70)
-        & (df.percent_below_54_2week > 1)
-        & (df.percent_below_54_2week < 1.5)
-        & (df.percent_below_40_2week == 0)
-        & (df.days_with_insulin >= 14)
-    ]
-
-
-def filter_data_for_non_ideal_settings(df):
-    """ Filter to get settings that likely aren't correct """
-    return df[
-        (df.age_at_baseline >= 18)
-        & (df.percent_cgm_available_2week >= 90)
-        & (df.percent_below_54_2week > 5)
-        & (df.days_with_insulin >= 14)
-    ]
-
-
 def three_dimension_plot(x, y, z, labels=["", "", ""], title=""):
     """
     Function to plot a 3D graph of data, with optional labels & a title
