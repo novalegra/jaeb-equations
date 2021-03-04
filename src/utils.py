@@ -11,6 +11,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from pathlib import Path
 from sklearn.model_selection import KFold
 from enum import Enum
+from scipy.stats import gaussian_kde
+from scipy.interpolate import make_interp_spline
 
 
 class DemographicSelection(Enum):
@@ -104,6 +106,7 @@ def plot_by_frequency(
     bins=10,
     export_path="",
     bin_width=None,
+    add_density=True,
 ):
     """
     column - column to plot frequencies of
@@ -116,10 +119,22 @@ def plot_by_frequency(
     """
     if bin_width and len(x_lim) == 2:
         bins = round((max(column) - min(column)) / bin_width)
-    plt.hist(column, bins=bins)
+    _, d, _ = plt.hist(column, bins=bins, density=add_density)
+    if add_density:
+        plt.ylabel("Density")
+        density = gaussian_kde(column)
+        # To get smoother line
+        x_smoothed = np.linspace(min(d), max(d), 200)
+        spline = make_interp_spline(d, density(d))
+        y_smoothed = spline(x_smoothed)
+
+        plt.plot(x_smoothed, y_smoothed, "r--")
+    else:
+        plt.ylabel("Count of Occurrences")
+
     plt.title(title, fontsize=25)
     plt.xlabel(x_axis_label)
-    plt.ylabel("Count of Occurrences")
+
     if x_lim:
         plt.xlim(x_lim[0], x_lim[1])
     if len(export_path) > 0:
