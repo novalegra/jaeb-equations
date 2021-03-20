@@ -55,6 +55,8 @@ def make_graph(values, axes_labels, title, use_default_labels_if_ln=False):
     )
 
 
+df = df.groupby(["loop_id"]).mean()
+
 make_graph(
     df[basal],
     ["Count", "Scheduled Basal (U/day)"],
