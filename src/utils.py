@@ -103,6 +103,7 @@ def plot_by_frequency(
     title="",
     x_axis_label="",
     x_lim=None,
+    y_min_val=None,
     bins=10,
     export_path="",
     bin_width=None,
@@ -124,7 +125,7 @@ def plot_by_frequency(
         plt.ylabel("Density")
         density = gaussian_kde(column)
         # To get smoother line
-        x_smoothed = np.linspace(min(d), max(d), 200)
+        x_smoothed = np.linspace(min(d), max(d), 100)
         spline = make_interp_spline(d, density(d))
         y_smoothed = spline(x_smoothed)
 
@@ -137,6 +138,8 @@ def plot_by_frequency(
 
     if x_lim:
         plt.xlim(x_lim[0], x_lim[1])
+    if y_min_val:
+        plt.ylim(bottom=y_min_val)
     if len(export_path) > 0:
         plt.savefig(export_path)
     else:

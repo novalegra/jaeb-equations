@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import utils
 from pathlib import Path
 import math
@@ -8,6 +9,7 @@ from equation_utils import *
 input_file_name = "processed-aspirational_overall_2021_02_15_20-v0_1-9eea51f"
 data_path = utils.find_full_path(input_file_name, ".csv")
 should_save_graph = True
+should_take_log = True
 
 df = pd.read_csv(data_path)
 
@@ -42,13 +44,23 @@ def make_graph(y_true, y_predicted, axes_labels, title):
         export_path = "Histogram " + title + ".png"
     else:
         export_path = ""
+
+    if should_take_log:
+        residuals = np.log(abs(residuals.replace([np.inf, -np.inf], np.nan).dropna()))
+        export_path = "Ln " + export_path
+        title = "Ln " + title
+
+    plot_limits = [-6, 8] if should_take_log else [-100, 200]
+    bin_width = 2 if should_take_log else 20
+
     utils.plot_by_frequency(
         residuals,
         title,
         axes_labels[1],
-        [-100, 200],
-        bin_width=20,
+        plot_limits,
+        bin_width=bin_width,
         export_path=export_path,
+        y_min_val=0,
     )
 
 
