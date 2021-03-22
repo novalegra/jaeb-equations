@@ -29,7 +29,6 @@ def rmse(y, y_predict):
 
 
 def adjusted_r_2(r_2, n, k):
-    print(r_2, n, k, 1 - ((1 - r_2) * (n - 1) / (n - k - 1)))
     return 1 - ((1 - r_2) * (n - 1) / (n - k - 1))
 
 
