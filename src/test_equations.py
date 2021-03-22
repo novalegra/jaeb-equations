@@ -6,12 +6,13 @@ from pumpsettings import PumpSettings
 from sklearn.metrics import median_absolute_error, r2_score, mean_squared_error
 
 
-def compute_statistics(y_true, y_predicted):
+def compute_statistics(y_true, y_predicted, k):
     # Returns MAE, R^2, and RMSE values
     mae = round(median_absolute_error(y_true, y_predicted), 2)
-    r_squared = round(r2_score(y_true, y_predicted), 2)
+    r_squared = round(r2_score(y_true, y_predicted), 3)
+    adjusted_r_2 = round(utils.adjusted_r_2(r_squared, len(y_predicted), k), 3)
     rmse = round(mean_squared_error(y_true, y_predicted) ** 0.5, 2)
-    return (mae, r_squared, rmse)
+    return (mae, r_squared, adjusted_r_2, rmse)
 
 
 def run_equation_testing(
@@ -32,12 +33,15 @@ def run_equation_testing(
     result_cols = [
         "jaeb_mae",
         "jaeb_r_2",
+        "jaeb_adj_r_2",
         "jaeb_rmse",
         "traditional_fitted_mae",
         "traditional_fitted_r_2",
+        "traditional_fitted_adj_r_2",
         "traditional_fitted_rmse",
         "traditional_constants_mae",
         "traditional_constants_r_2",
+        "traditional_constants_adj_r_2",
         "traditional_constants_rmse",
     ]
     output_df = pd.DataFrame(columns=result_cols)
@@ -65,12 +69,12 @@ def run_equation_testing(
         lambda x: traditional_constant_equations.basal_equation(x[tdd_key]), axis=1
     )
 
-    jaeb_basal_stats = compute_statistics(df[basal_key], df["jaeb_predicted_basals"])
+    jaeb_basal_stats = compute_statistics(df[basal_key], df["jaeb_predicted_basals"], 2)
     traditional_fitted_basal_stats = compute_statistics(
-        df[basal_key], df["traditional_fitted_predicted_basals"]
+        df[basal_key], df["traditional_fitted_predicted_basals"], 1
     )
     traditional_constants_basal_stats = compute_statistics(
-        df[basal_key], df["traditional_constants_predicted_basals"]
+        df[basal_key], df["traditional_constants_predicted_basals"], 1
     )
 
     output_df.loc["Basal"] = [
@@ -97,12 +101,12 @@ def run_equation_testing(
         ]
     )
 
-    jaeb_isf_stats = compute_statistics(df[isf_key], df["jaeb_predicted_isf"])
+    jaeb_isf_stats = compute_statistics(df[isf_key], df["jaeb_predicted_isf"], 2)
     traditional_fitted_isf_stats = compute_statistics(
-        df[isf_key], df["traditional_fitted_predicted_isf"]
+        df[isf_key], df["traditional_fitted_predicted_isf"], 1
     )
     traditional_constants_isf_stats = compute_statistics(
-        df[isf_key], df["traditional_constants_predicted_isf"]
+        df[isf_key], df["traditional_constants_predicted_isf"], 1
     )
 
     output_df.loc["ISF"] = [
@@ -122,12 +126,12 @@ def run_equation_testing(
         lambda x: traditional_constant_equations.icr_equation(x[tdd_key]), axis=1
     )
 
-    jaeb_icr_stats = compute_statistics(df[icr_key], df["jaeb_predicted_icr"])
+    jaeb_icr_stats = compute_statistics(df[icr_key], df["jaeb_predicted_icr"], 2)
     traditional_fitted_icr_stats = compute_statistics(
-        df[icr_key], df["traditional_fitted_predicted_icr"]
+        df[icr_key], df["traditional_fitted_predicted_icr"], 1
     )
     traditional_constants_icr_stats = compute_statistics(
-        df[icr_key], df["traditional_constants_predicted_icr"]
+        df[icr_key], df["traditional_constants_predicted_icr"], 1
     )
 
     output_df.loc["ICR"] = [
