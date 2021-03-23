@@ -2,10 +2,12 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import utils
 import numpy as np
+import uuid
 
 input_file_name = "processed-30-min-win_all_selected_rows_2021_02_14_23-v0_1-b8c3222"
 data_path = utils.find_full_path(input_file_name, ".csv")
 df = pd.read_csv(data_path, index_col=0)
+df["uuid"] = [uuid.uuid4() for _ in range(len(df.index))]
 analysis_name = "evaluate-equations"
 percent_test_data = 0.3
 
@@ -41,6 +43,7 @@ percent_above_400 = "percent_above_400"
 percent_cgm = "percent_cgm_available"
 days_insulin = None
 loop_id = "loop_id"
+issue_report_date = "issue_report_date"
 
 # From the survey data
 bmi = "BMI"
@@ -80,6 +83,29 @@ print(
     )
 )
 export(aspirational_overall, "overall")
+
+# Find non-aspirational reports
+no_aspirational_report_ids = np.setdiff1d(df[loop_id], aspirational_overall[loop_id])
+
+grouped_by_patient_aspirational = aspirational_overall.groupby([loop_id])
+grouped_by_patient_all = df.groupby([loop_id])
+reports_to_add = []
+for id in set(aspirational_overall[loop_id]):
+    asp_data = grouped_by_patient_aspirational.get_group(id)
+    all_data = grouped_by_patient_all.get_group(id)
+
+    non_aspirational_dates = np.setdiff1d(
+        all_data[issue_report_date], asp_data[issue_report_date]
+    )
+    reports_to_add.extend(
+        all_data[all_data[issue_report_date].isin(non_aspirational_dates)]["uuid"]
+    )
+
+non_aspirational = df[
+    (df[loop_id].isin(no_aspirational_report_ids)) | (df["uuid"].isin(reports_to_add))
+]
+assert len(aspirational_overall) + len(non_aspirational) == len(df)
+export(non_aspirational, "non-aspirational", "processed-non-aspirational")
 
 y_cols = [isf, icr, basal, age]
 
