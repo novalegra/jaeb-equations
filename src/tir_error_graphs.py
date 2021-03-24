@@ -58,25 +58,34 @@ df["jaeb_predicted_isf"] = df.apply(
 df["jaeb_predicted_icr"] = df.apply(
     lambda x: equation_utils.jaeb_icr_equation(x[tdd], x[bmi]), axis=1
 )
-df = df.dropna(
-    subset=["jaeb_predicted_basal", "jaeb_predicted_isf", "jaeb_predicted_icr", tir]
-)
 
-make_graph(
-    df[tir],
-    df[basal],
-    df["jaeb_predicted_basal"],
-    ["TIR", "Error Ratio"],
-    "Basal TIR vs Error Ratio",
-)
+drop_list = [
+    "jaeb_predicted_basal",
+    "jaeb_predicted_isf",
+    "jaeb_predicted_icr",
+    tir,
+    basal,
+    isf,
+    icr,
+]
+df = df.dropna(subset=drop_list)
+df = df[(df[drop_list] != 0).all(axis=1)]
 
-make_graph(
-    df[tir],
-    df[isf],
-    df["jaeb_predicted_isf"],
-    ["TIR", "Error Ratio"],
-    "ISF TIR vs Error Ratio",
-)
+# make_graph(
+#     df[tir],
+#     df[basal],
+#     df["jaeb_predicted_basal"],
+#     ["TIR", "Error Ratio"],
+#     "Basal TIR vs Error Ratio",
+# )
+
+# make_graph(
+#     df[tir],
+#     df[isf],
+#     df["jaeb_predicted_isf"],
+#     ["TIR", "Error Ratio"],
+#     "ISF TIR vs Error Ratio",
+# )
 
 make_graph(
     df[tir],
