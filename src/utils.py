@@ -151,9 +151,14 @@ def plot_by_frequency(
     plt.clf()
 
 
-def two_dimension_plot(x, y, labels=["", ""], title="", ylim=None, save=False):
+def two_dimension_plot(
+    x, y, labels=["", ""], title="", ylim=None, equation=None, legend=None, save=False
+):
     """
     Function to plot a 2D graph of data, with optional labels & a title
+
+    ylim: 2 element list, first element is minimum y value and second is max y value
+    equation: 2 element list, first element is m and second element is b (y = mx+b form)
     """
     assert len(labels) == 2
 
@@ -165,6 +170,12 @@ def two_dimension_plot(x, y, labels=["", ""], title="", ylim=None, save=False):
     axes = plt.gca()
     if ylim:
         axes.set_ylim(ylim)
+    if equation != None:
+        x_vals = np.linspace(min(x), max(x), int(max(x) - min(x)))
+        m, b = equation[0], equation[1]
+        plt.plot(x_vals, x_vals * m + b, "-r")
+    if legend != None:
+        plt.legend(legend)
 
     plt.title(title, fontsize=25)
     if save:
