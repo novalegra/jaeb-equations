@@ -143,8 +143,8 @@ make_graph(
     df[tir],
     df[icr],
     df["jaeb_predicted_icr"],
-    ["TIR", "Error Ratio"],
-    "ICR TIR vs Error Ratio",
+    ["TIR", "ICR Predicted-Actual Setting Ratio"],
+    "TIR vs ICR Setting Ratio",
 )
 
 make_compound_graph(
