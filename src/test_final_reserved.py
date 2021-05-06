@@ -3,7 +3,8 @@ import utils
 from pumpsettings import PumpSettings
 from test_equations import run_equation_testing
 
-input_file = "processed-aspirational_final_test_2021_02_04_22-v0_1-4d1a82f"
+x_input_file = "X_test_2021-05-02_equation_paper_all_data_reduced"
+y_input_file = "y_test_2021-05-02_equation_paper_all_data_reduced"
 
 jaeb = PumpSettings(
     equation_utils.jaeb_basal_equation,
@@ -24,4 +25,6 @@ traditional_constants = PumpSettings(
 )
 
 # This will output the results to a file
-run_equation_testing(input_file, jaeb, traditional_fitted, traditional_constants)
+run_equation_testing(
+    x_input_file, y_input_file, jaeb, traditional_fitted, traditional_constants
+)

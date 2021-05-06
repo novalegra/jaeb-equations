@@ -16,7 +16,8 @@ def compute_statistics(y_true, y_predicted, k):
 
 
 def run_equation_testing(
-    input_file_name,
+    x_input_file_name,
+    y_input_file_name,
     jaeb_equations,
     traditional_fitted_equations,
     traditional_constant_equations,
@@ -28,8 +29,11 @@ def run_equation_testing(
     traditional_equations: PumpSettings object with equation data
     """
 
-    data_path = utils.find_full_path(input_file_name, ".csv")
-    df = pd.read_csv(data_path)
+    x_data_path = utils.find_full_path(x_input_file_name, ".csv")
+    x_df = pd.read_csv(x_data_path)
+    y_data_path = utils.find_full_path(y_input_file_name, ".csv")
+    y_df = pd.read_csv(y_data_path)
+    df = pd.concat([x_df, y_df], axis=1)
     result_cols = [
         "jaeb_mae",
         "jaeb_r_2",
@@ -48,15 +52,14 @@ def run_equation_testing(
     analysis_name = "evaluate-equations"
 
     # Keys for working with Jaeb exports
-    tdd_key = "avg_total_insulin_per_day_outcomes"
-    basal_key = "total_daily_scheduled_basal"  # Total daily basal
-    carb_key = "avg_carbs_per_day_outcomes"  # Total daily CHO
-    bmi_key = "BMI"
-    bmi_percentile = "BMIPercentile"
-    isf_key = "avg_isf"
-    icr_key = "weighted_cir_outcomes"
-    tir_key = "percent_70_180"
-    age_key = "Age"
+    tdd_key = "geomean_total_daily_insulin_dose_in_chunk_outcomes"
+    basal_key = "geomean_basal_rate"  # Hourly basal rate
+    carb_key = "geomean_total_daily_carbs_in_chunk_outcomes"  # Total daily CHO
+    bmi_key = "bmi"
+    isf_key = "geomean_isf"
+    icr_key = "geomean_weighted_cir"
+
+    df[basal_key] *= 24  # Convert hourly rate to daily rate
 
     """ Basal Analysis """
     df["jaeb_predicted_basals"] = df.apply(
@@ -161,11 +164,11 @@ def run_equation_testing(
     )
 
     short_file_name = (
-        input_file_name[0:10] if len(input_file_name) > 10 else input_file_name
+        x_input_file_name[0:10] if len(x_input_file_name) > 10 else x_input_file_name
     )
     output_df.to_csv(
         utils.get_save_path_with_file(
-            input_file_name,
+            x_input_file_name,
             analysis_name,
             short_file_name + "_equation_errors_" + utils.get_file_stamps()[0] + ".csv",
             "data-analysis",
@@ -174,7 +177,7 @@ def run_equation_testing(
 
     df.to_csv(
         utils.get_save_path_with_file(
-            input_file_name,
+            x_input_file_name,
             analysis_name,
             short_file_name
             + "_with_equation_predictions_"
