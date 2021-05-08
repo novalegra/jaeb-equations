@@ -4,7 +4,7 @@ import utils
 import numpy as np
 import uuid
 
-input_file_name = "processed-30-min-win_all_selected_rows_2021_02_14_23-v0_1-b8c3222"
+input_file_name = "2021-05-02_equation_paper_all_data"
 data_path = utils.find_full_path(input_file_name, ".csv")
 df = pd.read_csv(data_path, index_col=0)
 df["uuid"] = [uuid.uuid4() for _ in range(len(df.index))]
@@ -28,11 +28,12 @@ def export(dataframe, df_descriptor, short_file_name="processed-aspirational"):
     )
 
 
-tdd = "avg_total_insulin_per_day_outcomes"
-basal = "total_daily_scheduled_basal"  # Total daily basal
-total_daily_carbs = "avg_carbs_per_day_outcomes"  # Total daily CHO
-isf = "avg_isf"
-icr = "weighted_cir_outcomes"
+tdd = "geomean_total_daily_insulin_dose_in_chunk_outcomes"
+basal = "geomean_basal_rate"  # Hourly basal
+df[basal] *= 24  # Convert to total daily basal
+total_daily_carbs = "geomean_total_daily_carbs_in_chunk_outcomes"  # Total daily CHO
+isf = "geomean_isf"
+icr = "geomean_weighted_cir"
 tir = "percent_70_180"
 percent_below_40 = "percent_below_40"
 percent_below_54 = "percent_below_54"
@@ -46,9 +47,9 @@ loop_id = "loop_id"
 issue_report_date = "issue_report_date"
 
 # From the survey data
-bmi = "BMI"
-bmi_percentile = "BMIPercentile"
-age = "Age"
+bmi = "bmi"
+bmi_percentile = "bmi_percent"
+age = "ageAtBaseline"
 
 keys = {
     "age": age,
