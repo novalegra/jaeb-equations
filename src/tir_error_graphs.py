@@ -44,7 +44,6 @@ def make_graph(
         actual / predicted
         for (actual, predicted) in zip(actual_setting, predicted_setting)
     ]
-    print(min(y))
 
     # Stats: slope, intercept, r_value, p_value, std_err
     stat = stats.linregress(tir, y)
@@ -127,7 +126,6 @@ drop_list = [
 ]
 df = df.dropna(subset=drop_list)
 df = df[(df[drop_list] != 0).all(axis=1)]
-df = df[(df[isf] / df["jaeb_predicted_isf"] > 1)]
 
 make_graph(
     df[tir],
