@@ -271,8 +271,9 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 y_train_data = y_train_fold[y_lin_log].values.reshape(-1, 1)
                 y_val_data = y_val_fold[y_lin_log].values.reshape(-1, 1)
 
-                regr = linear_model.LinearRegression(fit_intercept=fit_intercept)
-                regr.fit(X_train_X_cols, y_train_data)
+                # regr = linear_model.LinearRegression(fit_intercept=fit_intercept)
+                regr = linear_model.HuberRegressor()
+                regr.fit(X_train_X_cols, np.ravel(y_train_data))
                 y_predict = regr.predict(X_val_X_cols)
                 if "log" in y_lin_log:
                     y_val_data = np.exp(y_val_data)
