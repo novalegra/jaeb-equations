@@ -19,6 +19,7 @@ import statsmodels.api as sm
 import utils
 from statsmodels.graphics.gofplots import ProbPlot
 import pathlib
+from tensorflow.keras.losses import Huber
 
 
 def adjusted_r_2(r_2, n, k):
@@ -161,6 +162,20 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
     all_combos = list(product(y, intercept, bmi, cho, tdd))
     ac_df = pd.DataFrame(all_combos, columns=["y", "intercept", "BMI", "CHO", "TDD"])
 
+    ac_df["n_params"] = np.nan
+    ac_df["MAPE_mean"] = np.nan
+    ac_df["model_warning_mean"] = np.nan
+
+    for pm in ["intercept", "BMI", "CHO", "TDD"]:
+        ac_df["{}_huber".format(pm)] = np.nan
+    for pm in ["log_BMI", "log_CHO", "log_TDD"]:
+        ac_df["{}_huber".format(pm)] = np.nan
+
+    for pm in ["intercept", "BMI", "CHO", "TDD"]:
+        ac_df["{}_scaled_huber".format(pm)] = np.nan
+    for pm in ["log_BMI", "log_CHO", "log_TDD"]:
+        ac_df["{}_scaled_huber".format(pm)] = np.nan
+
     for pm in ["const", "BMI", "CHO", "TDD"]:
         ac_df["{}_scaled".format(pm)] = np.nan
     for pm in ["log_BMI", "log_CHO", "log_TDD"]:
@@ -198,6 +213,8 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
             huber_regr = linear_model.HuberRegressor(fit_intercept=fit_intercept)
             huber_regr.fit(X_train[X_cols], np.ravel(y_train[y_lin_log]))
 
+
+
             if fit_intercept:
                 ac_df.loc[combo, "intercept_huber"] = huber_regr.intercept_
             for i, key in enumerate(get_coeff(list(ac))):
@@ -209,7 +226,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
 
             if fit_intercept:
                 ac_df.loc[
-                    combo, "intercept_huber_scaled"
+                    combo, "intercept_scaled_huber"
                 ] = huber_regr_scaled.intercept_
             for i, key in enumerate(get_coeff(list(ac))):
                 ac_df.loc[
@@ -260,26 +277,26 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
             for c, col in enumerate(cols):
                 ac_df.loc[combo, col] = temp_df.loc[c, 0]
 
-            if should_plot(list(ac)):
-                model_norm_residuals = res.get_influence().resid_studentized_internal
-                model_cooks = res.get_influence().cooks_distance[0]
-
-                outlier_threshold = np.mean(model_cooks) * 3
-                outliers = np.argsort(model_cooks)[model_cooks > outlier_threshold]
-                print(len(outliers), outliers)
-
-                QQ = ProbPlot(model_norm_residuals)
-                plot_lm_2 = QQ.qqplot(line="45", alpha=0.5, color="#4C72B0", lw=1)
-                plot_lm_2.axes[0].set_title(
-                    f"Normal Q-Q for {list(ac)}\nOutliers: {len(outliers)}/{len(model_cooks)} ({round(len(outliers)/len(model_cooks)* 100)}%)"
-                )
-                plot_lm_2.axes[0].set_xlabel("Theoretical Quantiles")
-                plot_lm_2.axes[0].set_ylabel("Standardized Residuals")
-
-                combo_description = "_".join(str(item) for item in list(ac))
-                title = f"{pathlib.Path()}/plots/normal_qq_{combo_description}.png"
-
-                plt.savefig(title)
+            # if should_plot(list(ac)):
+            #     model_norm_residuals = res.get_influence().resid_studentized_internal
+            #     model_cooks = res.get_influence().cooks_distance[0]
+            #
+            #     outlier_threshold = np.mean(model_cooks) * 3
+            #     outliers = np.argsort(model_cooks)[model_cooks > outlier_threshold]
+            #     print(len(outliers), outliers)
+            #
+            #     QQ = ProbPlot(model_norm_residuals)
+            #     plot_lm_2 = QQ.qqplot(line="45", alpha=0.5, color="#4C72B0", lw=1)
+            #     plot_lm_2.axes[0].set_title(
+            #         f"Normal Q-Q for {list(ac)}\nOutliers: {len(outliers)}/{len(model_cooks)} ({round(len(outliers)/len(model_cooks)* 100)}%)"
+            #     )
+            #     plot_lm_2.axes[0].set_xlabel("Theoretical Quantiles")
+            #     plot_lm_2.axes[0].set_ylabel("Standardized Residuals")
+            #
+            #     combo_description = "_".join(str(item) for item in list(ac))
+            #     title = f"{pathlib.Path()}/plots/normal_qq_{combo_description}.png"
+            #
+            #     plt.savefig(title)
 
             # break the training set into 5 folds for model selection with cross validation
             kf = KFold(n_splits=5)
@@ -309,6 +326,11 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 if "log" in y_lin_log:
                     y_val_data = np.exp(y_val_data)
                     y_predict = np.exp(y_predict)
+
+                h = Huber(delta=1.35)
+                ac_df.loc[
+                    combo, "huber_loss_fold{}".format(fold)
+                ] = h(y_val_data, y_predict).numpy()
 
                 ac_df.loc[
                     combo, "MAPE_fold{}".format(fold)
@@ -362,6 +384,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
 
             for metric in [
                 "MAPE",
+                "huber_loss",
                 "MAE",
                 "RMSE",
                 "MAX_ERROR",
@@ -393,8 +416,8 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                     )
 
     ac_df.sort_values(
-        by=["model_warning_max", "perc_pval_lt05", "MAPE_mean"],
-        ascending=[True, False, True],
+        by=["n_params", "MAPE_mean"],
+        ascending=[True, True],
         inplace=True,
     )
     ac_df.reset_index(inplace=True)
