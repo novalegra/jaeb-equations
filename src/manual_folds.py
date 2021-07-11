@@ -184,8 +184,29 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 X_cols.remove("off")
 
             # let's build the full model with all training data so we can look at AIC, BIC and coefficients
-            # fit with stats model
+            # fit with huber & grab coefficients/intercept
+            huber_regr = linear_model.HuberRegressor(fit_intercept=fit_intercept)
+            huber_regr.fit(X_train[X_cols], np.ravel(y_train[y_lin_log]))
 
+            if fit_intercept:
+                ac_df.loc[combo, "intercept_huber"] = huber_regr.intercept_
+            for i, key in enumerate(get_coeff(list(ac))):
+                ac_df.loc[combo, "{}_huber".format(key)] = huber_regr.coef_[i]
+
+            # fit with huber, scaled, & grab coefficents/intercept
+            huber_regr_scaled = linear_model.HuberRegressor(fit_intercept=fit_intercept)
+            huber_regr_scaled.fit(X_train_scaled[X_cols], np.ravel(y_train[y_lin_log]))
+
+            if fit_intercept:
+                ac_df.loc[
+                    combo, "intercept_huber_scaled"
+                ] = huber_regr_scaled.intercept_
+            for i, key in enumerate(get_coeff(list(ac))):
+                ac_df.loc[
+                    combo, "{}_scaled_huber".format(key)
+                ] = huber_regr_scaled.coef_[i]
+
+            # fit with stats model
             if fit_intercept:
                 stats_mod_scaled = sm.OLS(
                     y_train[y_lin_log], sm.add_constant(X_train_scaled[X_cols])
@@ -272,7 +293,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 y_val_data = y_val_fold[y_lin_log].values.reshape(-1, 1)
 
                 # regr = linear_model.LinearRegression(fit_intercept=fit_intercept)
-                regr = linear_model.HuberRegressor()
+                regr = linear_model.HuberRegressor(fit_intercept=fit_intercept)
                 regr.fit(X_train_X_cols, np.ravel(y_train_data))
                 y_predict = regr.predict(X_val_X_cols)
                 if "log" in y_lin_log:
