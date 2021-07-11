@@ -25,6 +25,16 @@ def adjusted_r_2(r_2, n, k):
     return 1 - ((1 - r_2) * (n - 1) / (n - k - 1))
 
 
+def get_coeff(combo_list):
+    model_params = combo_list[2:]
+
+    cleaned_model_params = []
+    for param in model_params:
+        if param != "off":
+            cleaned_model_params.append(param)
+    return cleaned_model_params
+
+
 def should_plot(combo_list):
     print(combo_list)
     result = tuple(combo_list) in [
