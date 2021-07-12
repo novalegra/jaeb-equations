@@ -36,6 +36,47 @@ def get_coeff(combo_list):
     return cleaned_model_params
 
 
+# Take a list of input parameters and return the list with only
+# the parameters that are turned 'on', as per the parameter combination settings
+def get_model_inputs(potential_inputs, parameter_settings):
+    assert len(potential_inputs) == len(parameter_settings)
+    output = []
+    for _input, setting in zip(potential_inputs, parameter_settings):
+        if setting != "off":
+            output.append(_input)
+
+    return output
+
+
+def no_basal_greater_than_tdd(equation, combo_list):
+    model_params = combo_list[2:]
+    bmi_setting, carb_setting, tdd_setting = model_params
+
+    not_selected = "off"
+
+    if tdd_setting == not_selected:
+        return True
+
+    # Only loop through params that are turned 'on'
+    valid_carbs = range(1001) if carb_setting != not_selected else range(1)
+    valid_bmis = range(101) if bmi_setting != not_selected else range(1)
+    valid_ttds = range(201)
+
+    for carb in valid_carbs:
+        for bmi in valid_bmis:
+            for tdd in valid_ttds:
+                prediction = equation.predict(
+                    np.array([get_model_inputs([carb, bmi, tdd], model_params)])
+                )
+                if prediction > tdd:
+                    print(
+                        f"Found basal equation with prediction ({prediction}) > TDD ({tdd})"
+                    )
+                    return False
+
+    return True
+
+
 def should_plot(combo_list):
     print(combo_list)
     result = tuple(combo_list) in [
@@ -259,6 +300,11 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 has_warning = True
             else:
                 has_warning = False
+            ac_df.loc[combo, "pred_greater_than_tdd"] = (
+                no_basal_greater_than_tdd(huber_regr, list(ac))
+                if "BASAL" in list(ac)[0]
+                else False
+            )
             ac_df.loc[combo, "model_warning"] = has_warning
             ac_df.loc[combo, "aic"] = res.aic
             ac_df.loc[combo, "bic"] = res.bic
