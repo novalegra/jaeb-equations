@@ -449,6 +449,25 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                         ]
                     )
 
+            for coefficient in X_cols:
+                if "{}_coef_fold1".format(coefficient) in ac_df.columns:
+                    coefficients = [
+                        ac_df.loc[combo, "{}_coef_fold1".format(coefficient)],
+                        ac_df.loc[combo, "{}_coef_fold2".format(coefficient)],
+                        ac_df.loc[combo, "{}_coef_fold3".format(coefficient)],
+                        ac_df.loc[combo, "{}_coef_fold4".format(coefficient)],
+                        ac_df.loc[combo, "{}_coef_fold5".format(coefficient)],
+                    ]
+
+                    max_coeff = np.max(coefficients)
+                    min_coeff = np.min(coefficients)
+
+                    percent_different = abs(max_coeff - min_coeff) / max_coeff * 100
+
+                    ac_df.loc[combo, "{}_greater_than_10_percent".format(metric)] = (
+                        percent_different > 10
+                    )
+
     ac_df.sort_values(
         by=["n_params", "MAPE_mean"],
         ascending=[True, True],
