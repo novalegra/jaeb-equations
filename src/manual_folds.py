@@ -26,16 +26,6 @@ def adjusted_r_2(r_2, n, k):
     return 1 - ((1 - r_2) * (n - 1) / (n - k - 1))
 
 
-def get_coeff(combo_list):
-    model_params = combo_list[2:]
-
-    cleaned_model_params = []
-    for param in model_params:
-        if param != "off":
-            cleaned_model_params.append(param)
-    return cleaned_model_params
-
-
 # Take a list of input parameters and return the list with only
 # the parameters that are turned 'on', as per the parameter combination settings
 def get_model_inputs(potential_inputs, parameter_settings):
@@ -254,11 +244,9 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
             huber_regr = linear_model.HuberRegressor(fit_intercept=fit_intercept)
             huber_regr.fit(X_train[X_cols], np.ravel(y_train[y_lin_log]))
 
-
-
             if fit_intercept:
                 ac_df.loc[combo, "intercept_huber"] = huber_regr.intercept_
-            for i, key in enumerate(get_coeff(list(ac))):
+            for i, key in enumerate(X_train[X_cols].columns):
                 ac_df.loc[combo, "{}_huber".format(key)] = huber_regr.coef_[i]
 
             # fit with huber, scaled, & grab coefficents/intercept
@@ -269,7 +257,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 ac_df.loc[
                     combo, "intercept_scaled_huber"
                 ] = huber_regr_scaled.intercept_
-            for i, key in enumerate(get_coeff(list(ac))):
+            for i, key in enumerate(X_train_scaled[X_cols].columns):
                 ac_df.loc[
                     combo, "{}_scaled_huber".format(key)
                 ] = huber_regr_scaled.coef_[i]
