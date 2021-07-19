@@ -212,6 +212,8 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
     for pm in ["log_BMI", "log_CHO", "log_TDD"]:
         ac_df["{}_scaled".format(pm)] = np.nan
 
+    ac_df["model_warning_greater_than_10_percent"] = np.nan
+
     for metric in [
         "MAPE",
         "MAE",
@@ -450,6 +452,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                     )
 
             for coefficient in X_cols:
+                has_variance = False
                 if "{}_coef_fold1".format(coefficient) in ac_df.columns:
                     coefficients = [
                         ac_df.loc[combo, "{}_coef_fold1".format(coefficient)],
@@ -463,10 +466,11 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                     min_coeff = np.min(coefficients)
 
                     percent_different = abs(max_coeff - min_coeff) / max_coeff * 100
+                    has_variance = has_variance or percent_different > 10
 
-                    ac_df.loc[combo, "{}_greater_than_10_percent".format(metric)] = (
-                        percent_different > 10
-                    )
+                ac_df.loc[
+                    combo, "coeff_variance_greater_than_10_percent"
+                ] = has_variance
 
     ac_df.sort_values(
         by=["n_params", "MAPE_mean"],
