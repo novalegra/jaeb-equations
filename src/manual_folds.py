@@ -284,7 +284,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
 
             ac_df.loc[combo, "n_params"] = len(X_cols) + (fit_intercept * 0.5)
             ac_df.loc[combo, "summary_all"] = res.summary()
-            if "[2]" in str(res.summary()):
+            if "multicollinearity" in str(res.summary()):
                 has_warning = True
             else:
                 has_warning = False
@@ -397,7 +397,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                     stats_mod = sm.OLS(y_train_fold[y_lin_log], X_train_fold[X_cols])
                 res = stats_mod.fit()
                 ac_df.loc[combo, "summary_fold{}".format(fold)] = res.summary()
-                if "[2]" in str(res.summary()):
+                if "multicollinearity" in str(res.summary()):
                     has_warning = True
                 else:
                     has_warning = False
