@@ -26,16 +26,6 @@ def adjusted_r_2(r_2, n, k):
     return 1 - ((1 - r_2) * (n - 1) / (n - k - 1))
 
 
-def get_coeff(combo_list):
-    model_params = combo_list[2:]
-
-    cleaned_model_params = []
-    for param in model_params:
-        if param != "off":
-            cleaned_model_params.append(param)
-    return cleaned_model_params
-
-
 # Take a list of input parameters and return the list with only
 # the parameters that are turned 'on', as per the parameter combination settings
 def get_model_inputs(potential_inputs, parameter_settings):
@@ -222,6 +212,8 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
     for pm in ["log_BMI", "log_CHO", "log_TDD"]:
         ac_df["{}_scaled".format(pm)] = np.nan
 
+    ac_df["model_warning_greater_than_10_percent"] = np.nan
+
     for metric in [
         "MAPE",
         "MAE",
@@ -254,11 +246,9 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
             huber_regr = linear_model.HuberRegressor(fit_intercept=fit_intercept)
             huber_regr.fit(X_train[X_cols], np.ravel(y_train[y_lin_log]))
 
-
-
             if fit_intercept:
                 ac_df.loc[combo, "intercept_huber"] = huber_regr.intercept_
-            for i, key in enumerate(get_coeff(list(ac))):
+            for i, key in enumerate(X_train[X_cols].columns):
                 ac_df.loc[combo, "{}_huber".format(key)] = huber_regr.coef_[i]
 
             # fit with huber, scaled, & grab coefficents/intercept
@@ -269,7 +259,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 ac_df.loc[
                     combo, "intercept_scaled_huber"
                 ] = huber_regr_scaled.intercept_
-            for i, key in enumerate(get_coeff(list(ac))):
+            for i, key in enumerate(X_train_scaled[X_cols].columns):
                 ac_df.loc[
                     combo, "{}_scaled_huber".format(key)
                 ] = huber_regr_scaled.coef_[i]
@@ -296,7 +286,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
 
             ac_df.loc[combo, "n_params"] = len(X_cols) + (fit_intercept * 0.5)
             ac_df.loc[combo, "summary_all"] = res.summary()
-            if "[2]" in str(res.summary()):
+            if "multicollinearity" in str(res.summary()):
                 has_warning = True
             else:
                 has_warning = False
@@ -409,7 +399,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                     stats_mod = sm.OLS(y_train_fold[y_lin_log], X_train_fold[X_cols])
                 res = stats_mod.fit()
                 ac_df.loc[combo, "summary_fold{}".format(fold)] = res.summary()
-                if "[2]" in str(res.summary()):
+                if "multicollinearity" in str(res.summary()):
                     has_warning = True
                 else:
                     has_warning = False
@@ -460,6 +450,27 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                             ac_df.loc[combo, "{}_fold5".format(metric)],
                         ]
                     )
+
+            for coefficient in X_cols:
+                has_variance = False
+                if "{}_coef_fold1".format(coefficient) in ac_df.columns:
+                    coefficients = [
+                        ac_df.loc[combo, "{}_coef_fold1".format(coefficient)],
+                        ac_df.loc[combo, "{}_coef_fold2".format(coefficient)],
+                        ac_df.loc[combo, "{}_coef_fold3".format(coefficient)],
+                        ac_df.loc[combo, "{}_coef_fold4".format(coefficient)],
+                        ac_df.loc[combo, "{}_coef_fold5".format(coefficient)],
+                    ]
+
+                    max_coeff = np.max(coefficients)
+                    min_coeff = np.min(coefficients)
+
+                    percent_different = abs(max_coeff - min_coeff) / max_coeff * 100
+                    has_variance = has_variance or percent_different > 10
+
+                ac_df.loc[
+                    combo, "coeff_variance_greater_than_10_percent"
+                ] = has_variance
 
     ac_df.sort_values(
         by=["n_params", "MAPE_mean"],
