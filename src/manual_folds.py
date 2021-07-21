@@ -49,9 +49,10 @@ def no_basal_greater_than_tdd(equation, combo_list):
         return True
 
     # Only loop through params that are turned 'on'
-    valid_carbs = range(1001) if carb_setting != not_selected else range(1)
-    valid_bmis = range(101) if bmi_setting != not_selected else range(1)
-    valid_ttds = range(201)
+    # @Anna, I am including some steps here to speed up the code
+    valid_carbs = range(0, 1001, 50) if carb_setting != not_selected else range(1)
+    valid_bmis = range(0, 101, 10) if bmi_setting != not_selected else range(1)
+    valid_ttds = range(0, 201, 20)
 
     for carb in valid_carbs:
         for bmi in valid_bmis:
@@ -472,25 +473,13 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                     combo, "coeff_variance_greater_than_10_percent"
                 ] = has_variance
 
+    #@Anna, by Jaeb basal prediction, are you referring to rayhan's original equations?
+    # BASAL EQUATIONS
     jaeb_basal_pred = X_train.apply(
         lambda x: equation_utils.jaeb_basal_equation(x["TDD"], x["CHO"]), axis=1
     )
     ac_df.loc["jaeb_basal_pred", "MAPE_mean"] = mean_absolute_percentage_error(
         y_train["BASAL"], jaeb_basal_pred
-    )
-
-    jaeb_isf_pred = X_train.apply(
-        lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]), axis=1
-    )
-    ac_df.loc["jaeb_isf_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_train["ISF"], jaeb_isf_pred
-    )
-
-    jaeb_icr_pred = X_train.apply(
-        lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]), axis=1
-    )
-    ac_df.loc["jaeb_icr_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_train["CIR"], jaeb_icr_pred
     )
 
     trad_basal_pred = X_train.apply(
@@ -500,11 +489,27 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
         y_train["BASAL"], trad_basal_pred
     )
 
+    # ISF EQUATIONS
+    jaeb_isf_pred = X_train.apply(
+        lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]), axis=1
+    )
+    ac_df.loc["jaeb_isf_pred", "MAPE_mean"] = mean_absolute_percentage_error(
+        y_train["ISF"], jaeb_isf_pred
+    )
+
     trad_isf_pred = X_train.apply(
         lambda x: equation_utils.traditional_constants_isf_equation(x["TDD"]), axis=1
     )
     ac_df.loc["trad_isf_pred", "MAPE_mean"] = mean_absolute_percentage_error(
         y_train["ISF"], trad_isf_pred
+    )
+
+    # CIR EQUATIONS
+    jaeb_icr_pred = X_train.apply(
+        lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]), axis=1
+    )
+    ac_df.loc["jaeb_icr_pred", "MAPE_mean"] = mean_absolute_percentage_error(
+        y_train["CIR"], jaeb_icr_pred
     )
 
     trad_icr_pred = X_train.apply(
