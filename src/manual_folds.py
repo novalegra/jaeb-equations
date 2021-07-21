@@ -160,6 +160,10 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.3, random_state=1,
 )
 
+# add fold information here
+kf = KFold(n_splits=5)
+
+
 # scale the X data so that all have zero mean and std of 1
 scaler = StandardScaler().fit(X_train)
 X_train_scaled = pd.DataFrame(
@@ -474,53 +478,122 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 ] = has_variance
 
     #@Anna, by Jaeb basal prediction, are you referring to rayhan's original equations?
-    # BASAL EQUATIONS
-    jaeb_basal_pred = X_train.apply(
-        lambda x: equation_utils.jaeb_basal_equation(x["TDD"], x["CHO"]), axis=1
-    )
-    ac_df.loc["jaeb_basal_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_train["BASAL"], jaeb_basal_pred
-    )
+    print("starting the special equations")
+    fold = 0
+    for i, j in kf.split(X_train):
+        fold = fold + 1
+        print("starting fold {}".format(fold))
+        X_train_fold = X_train.iloc[i, :]
+        X_val_fold = X_train.iloc[j, :]
+        y_train_fold = y_train.iloc[i, :]
+        y_val_fold = y_train.iloc[j, :]
 
-    trad_basal_pred = X_train.apply(
-        lambda x: equation_utils.traditional_constants_basal_equation(x["TDD"]), axis=1
-    )
-    ac_df.loc["trad_basal_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_train["BASAL"], trad_basal_pred
-    )
+        if len(X_cols) == 1:
+            X_train_X_cols = X_train_fold[X_cols].values.reshape(-1, 1)
+            X_val_X_cols = X_val_fold[X_cols].values.reshape(-1, 1)
+        else:
+            X_train_X_cols = X_train_fold[X_cols]
+            X_val_X_cols = X_val_fold[X_cols]
 
-    # ISF EQUATIONS
-    jaeb_isf_pred = X_train.apply(
-        lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]), axis=1
-    )
-    ac_df.loc["jaeb_isf_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_train["ISF"], jaeb_isf_pred
-    )
+        if "BASAL" in y:
+            y_lin_log = "BASAL"
+            new_cols = ["jaeb_basal_pred", "trad_basal_pred"]
 
-    trad_isf_pred = X_train.apply(
-        lambda x: equation_utils.traditional_constants_isf_equation(x["TDD"]), axis=1
-    )
-    ac_df.loc["trad_isf_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_train["ISF"], trad_isf_pred
-    )
+        if "ISF" in y:
+            y_lin_log = "ISF"
+            new_cols = ["jaeb_isf_pred", "trad_isf_pred"]
 
-    # CIR EQUATIONS
-    jaeb_icr_pred = X_train.apply(
-        lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]), axis=1
-    )
-    ac_df.loc["jaeb_icr_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_train["CIR"], jaeb_icr_pred
-    )
+        if "CIR" in y:
+            y_lin_log = "CIR"
+            new_cols = ["jaeb_icr_pred", "trad_icr_pred"]
 
-    trad_icr_pred = X_train.apply(
-        lambda x: equation_utils.traditional_constants_icr_equation(x["TDD"]), axis=1
-    )
-    ac_df.loc["trad_icr_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_train["CIR"], trad_icr_pred
-    )
+        y_train_data = y_train_fold[y_lin_log].values.reshape(-1, 1)
+        y_val_data = y_val_fold[y_lin_log].values.reshape(-1, 1)
+
+        for new_col in new_cols:
+
+            # BASAL EQUATIONS
+            if "jaeb_basal_pred" in new_col:
+                y_predict = X_val_fold.apply(
+                    lambda x: equation_utils.jaeb_basal_equation(x["TDD"], x["CHO"]), axis=1
+                ).values.reshape(-1, 1)
+
+            if "trad_basal_pred" in new_col:
+                y_predict = X_val_fold.apply(
+                    lambda x: equation_utils.traditional_constants_basal_equation(x["TDD"]), axis=1
+                ).values.reshape(-1, 1)
+
+            # ISF EQUATIONS
+            if "jaeb_isf_pred" in new_col:
+                y_predict = X_val_fold.apply(
+                    lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]), axis=1
+                ).values.reshape(-1, 1)
+
+            if "trad_isf_pred" in new_col:
+                y_predict = X_val_fold.apply(
+                    lambda x: equation_utils.traditional_constants_isf_equation(x["TDD"]), axis=1
+                ).values.reshape(-1, 1)
+
+            # CIR EQUATIONS
+            if "jaeb_icr_pred" in new_col:
+                y_predict = X_val_fold.apply(
+                    lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]), axis=1
+                ).values.reshape(-1, 1)
+
+            if "trad_icr_pred" in new_col:
+                y_predict = X_val_fold.apply(
+                    lambda x: equation_utils.traditional_constants_icr_equation(x["TDD"]), axis=1
+                ).values.reshape(-1, 1)
+
+            ac_df.loc[
+                new_col, "MAPE_fold{}".format(fold)
+            ] = mean_absolute_percentage_error(y_val_data, y_predict)
+
+            ac_df.loc[new_col, "MAE_fold{}".format(fold)] = median_absolute_error(
+                y_val_data, y_predict
+            )
+            ac_df.loc[new_col, "RMSE_fold{}".format(fold)] = mean_squared_error(
+                y_val_data, y_predict, squared=False
+            )
+            ac_df.loc[new_col, "MAX_ERROR_fold{}".format(fold)] = max_error(
+                y_val_data, y_predict
+            )
+            ac_df.loc[
+                new_col, "EXPLAIN_VAR_fold{}".format(fold)
+            ] = explained_variance_score(y_val_data, y_predict)
+
+            R2 = r2_score(y_val_data, y_predict)
+            ac_df.loc[new_col, "R2_fold{}".format(fold)] = R2
+            ac_df.loc[new_col, "ADJ_R2_fold{}".format(fold)] = adjusted_r_2(
+                R2, len(y_train_fold), len(X_cols) + (fit_intercept * 1)
+            )
+
+    for new_col in new_cols:
+        for metric in [
+            "MAPE",
+            "MAE",
+            "RMSE",
+            "MAX_ERROR",
+            "EXPLAIN_VAR",
+            "R2",
+            "ADJ_R2",
+        ]:
+            if "{}_fold1".format(metric) in ac_df.columns:
+                ac_df.loc[new_col, "{}_mean".format(metric)] = np.mean(
+                    [
+                        ac_df.loc[new_col, "{}_fold1".format(metric)],
+                        ac_df.loc[new_col, "{}_fold2".format(metric)],
+                        ac_df.loc[new_col, "{}_fold3".format(metric)],
+                        ac_df.loc[new_col, "{}_fold4".format(metric)],
+                        ac_df.loc[new_col, "{}_fold5".format(metric)],
+                    ]
+                )
+
+        ac_df.loc[new_col, "coeff_variance_greater_than_10_percent"] = False
+        ac_df.loc[new_col, "model_warning_mean"] = False
 
     ac_df.sort_values(
-        by=["n_params", "MAPE_mean"], ascending=[True, True], inplace=True,
+        by=["coeff_variance_greater_than_10_percent", "model_warning_mean", "MAPE_mean"], ascending=[True, True, True], inplace=True,
     )
     ac_df.reset_index(inplace=True)
-    ac_df.to_csv("{}-equation-results-MAPE.csv".format(y[0]))
+    ac_df.to_csv("{}-equation-results-MAPE-2021-07-21.csv".format(y[0]))
