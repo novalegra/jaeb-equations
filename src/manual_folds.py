@@ -476,48 +476,46 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
         lambda x: equation_utils.jaeb_basal_equation(x["TDD"], x["CHO"]), axis=1
     )
     ac_df.loc["jaeb_basal_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_cols["BASAL"], jaeb_basal_pred
+        y_train["BASAL"], jaeb_basal_pred
     )
 
     jaeb_isf_pred = X_train.apply(
         lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]), axis=1
     )
     ac_df.loc["jaeb_isf_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_cols["ISF"], jaeb_isf_pred
+        y_train["ISF"], jaeb_isf_pred
     )
 
     jaeb_icr_pred = X_train.apply(
         lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]), axis=1
     )
     ac_df.loc["jaeb_icr_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_cols["ICR"], jaeb_icr_pred
+        y_train["CIR"], jaeb_icr_pred
     )
 
     trad_basal_pred = X_train.apply(
         lambda x: equation_utils.traditional_constants_basal_equation(x["TDD"]), axis=1
     )
     ac_df.loc["trad_basal_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_cols["BASAL"], trad_basal_pred
+        y_train["BASAL"], trad_basal_pred
     )
 
     trad_isf_pred = X_train.apply(
         lambda x: equation_utils.traditional_constants_isf_equation(x["TDD"]), axis=1
     )
     ac_df.loc["trad_isf_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_cols["ISF"], trad_isf_pred
+        y_train["ISF"], trad_isf_pred
     )
 
     trad_icr_pred = X_train.apply(
         lambda x: equation_utils.traditional_constants_icr_equation(x["TDD"]), axis=1
     )
     ac_df.loc["trad_icr_pred", "MAPE_mean"] = mean_absolute_percentage_error(
-        y_cols["ICR"], trad_icr_pred
+        y_train["CIR"], trad_icr_pred
     )
 
     ac_df.sort_values(
-        by=["n_params", "MAPE_mean"],
-        ascending=[True, True],
-        inplace=True,
+        by=["n_params", "MAPE_mean"], ascending=[True, True], inplace=True,
     )
     ac_df.reset_index(inplace=True)
     ac_df.to_csv("{}-equation-results-MAPE.csv".format(y[0]))
