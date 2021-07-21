@@ -194,6 +194,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
     ac_df = pd.DataFrame(all_combos, columns=["y", "intercept", "BMI", "CHO", "TDD"])
 
     ac_df["n_params"] = np.nan
+    ac_df["coeff_variance_greater_than_10_percent"] = np.nan
     ac_df["MAPE_mean"] = np.nan
     ac_df["model_warning_mean"] = np.nan
 
@@ -211,8 +212,6 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
         ac_df["{}_scaled".format(pm)] = np.nan
     for pm in ["log_BMI", "log_CHO", "log_TDD"]:
         ac_df["{}_scaled".format(pm)] = np.nan
-
-    ac_df["model_warning_greater_than_10_percent"] = np.nan
 
     for metric in [
         "MAPE",
