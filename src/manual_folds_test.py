@@ -189,6 +189,10 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
 
             y_test_vals = y_test[y_lin_log]
 
+            if "log" in y_lin_log:
+                y_test_vals = np.exp(y_test_vals)
+                y_predict = np.exp(y_predict)
+
             h = Huber(delta=1.35)
             ac_df.loc[combo, "huber_loss_test"] = h(y_test_vals, y_predict).numpy()
 
