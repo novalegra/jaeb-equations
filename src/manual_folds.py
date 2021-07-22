@@ -49,7 +49,6 @@ def no_basal_greater_than_tdd(equation, combo_list):
         return True
 
     # Only loop through params that are turned 'on'
-    # @Anna, I am including some steps here to speed up the code
     valid_carbs = range(0, 1001, 50) if carb_setting != not_selected else range(1)
     valid_bmis = range(0, 101, 10) if bmi_setting != not_selected else range(1)
     valid_ttds = range(0, 201, 20)
@@ -477,7 +476,6 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                     combo, "coeff_variance_greater_than_10_percent"
                 ] = has_variance
 
-    #@Anna, by Jaeb basal prediction, are you referring to rayhan's original equations?
     print("starting the special equations")
     fold = 0
     for i, j in kf.split(X_train):
@@ -497,15 +495,15 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
 
         if "BASAL" in y:
             y_lin_log = "BASAL"
-            new_cols = ["jaeb_basal_pred", "trad_basal_pred"]
+            new_cols = ["rayhan_basal_pred", "trad_basal_pred"]
 
         if "ISF" in y:
             y_lin_log = "ISF"
-            new_cols = ["jaeb_isf_pred", "trad_isf_pred"]
+            new_cols = ["rayhan_isf_pred", "trad_isf_pred"]
 
         if "CIR" in y:
             y_lin_log = "CIR"
-            new_cols = ["jaeb_icr_pred", "trad_icr_pred"]
+            new_cols = ["rayhan_icr_pred", "trad_icr_pred"]
 
         y_train_data = y_train_fold[y_lin_log].values.reshape(-1, 1)
         y_val_data = y_val_fold[y_lin_log].values.reshape(-1, 1)
@@ -513,7 +511,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
         for new_col in new_cols:
 
             # BASAL EQUATIONS
-            if "jaeb_basal_pred" in new_col:
+            if "rayhan_basal_pred" in new_col:
                 y_predict = X_val_fold.apply(
                     lambda x: equation_utils.jaeb_basal_equation(x["TDD"], x["CHO"]), axis=1
                 ).values.reshape(-1, 1)
@@ -524,7 +522,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 ).values.reshape(-1, 1)
 
             # ISF EQUATIONS
-            if "jaeb_isf_pred" in new_col:
+            if "rayhan_isf_pred" in new_col:
                 y_predict = X_val_fold.apply(
                     lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]), axis=1
                 ).values.reshape(-1, 1)
@@ -535,7 +533,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                 ).values.reshape(-1, 1)
 
             # CIR EQUATIONS
-            if "jaeb_icr_pred" in new_col:
+            if "rayhan_icr_pred" in new_col:
                 y_predict = X_val_fold.apply(
                     lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]), axis=1
                 ).values.reshape(-1, 1)
