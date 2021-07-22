@@ -132,13 +132,6 @@ X_train, X_test, y_train, y_test = train_test_split(
 # add fold information here
 kf = KFold(n_splits=5)
 
-
-# scale the X data so that all have zero mean and std of 1
-scaler = StandardScaler().fit(X_train)
-X_train_scaled = pd.DataFrame(
-    scaler.transform(X_train), columns=X_train.columns, index=X_train.index
-)
-
 # loop through each of the 3 independent variables
 for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
     print("solving for the {} equations".format(y[0]))
