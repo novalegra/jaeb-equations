@@ -70,7 +70,6 @@ def has_negative_or_greater_than_tdd_basal(equation, model_params):
                     "BMI": bmi,
                     "log_BMI": bmi,
                 }
-                print(model_params, carb, bmi, tdd)
 
                 prediction = equation.predict(
                     np.array([get_model_inputs(lookup_dict, model_params)])
@@ -633,4 +632,4 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
         inplace=True,
     )
     ac_df.reset_index(inplace=True)
-    ac_df.to_csv("{}-equation-results-aq-MAPE-2021-07-21.csv".format(y[0]))
+    ac_df.to_csv("{}-equation-results-MAPE-2021-07-21.csv".format(y[0]))
