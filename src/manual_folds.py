@@ -368,9 +368,9 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                     y_predict = np.exp(y_predict)
 
                 h = Huber(delta=1.35)
-                ac_df.loc[
-                    combo, "huber_loss_fold{}".format(fold)
-                ] = h(y_val_data, y_predict).numpy()
+                ac_df.loc[combo, "huber_loss_fold{}".format(fold)] = h(
+                    y_val_data, y_predict
+                ).numpy()
 
                 ac_df.loc[
                     combo, "MAPE_fold{}".format(fold)
@@ -513,34 +513,46 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
             # BASAL EQUATIONS
             if "rayhan_basal_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.jaeb_basal_equation(x["TDD"], x["CHO"]), axis=1
+                    lambda x: equation_utils.jaeb_basal_equation(x["TDD"], x["CHO"]),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             if "trad_basal_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.traditional_constants_basal_equation(x["TDD"]), axis=1
+                    lambda x: equation_utils.traditional_constants_basal_equation(
+                        x["TDD"]
+                    ),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             # ISF EQUATIONS
             if "rayhan_isf_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]), axis=1
+                    lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             if "trad_isf_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.traditional_constants_isf_equation(x["TDD"]), axis=1
+                    lambda x: equation_utils.traditional_constants_isf_equation(
+                        x["TDD"]
+                    ),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             # CIR EQUATIONS
             if "rayhan_icr_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]), axis=1
+                    lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             if "trad_icr_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.traditional_constants_icr_equation(x["TDD"]), axis=1
+                    lambda x: equation_utils.traditional_constants_icr_equation(
+                        x["TDD"]
+                    ),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             ac_df.loc[
@@ -591,7 +603,13 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
         ac_df.loc[new_col, "model_warning_mean"] = False
 
     ac_df.sort_values(
-        by=["coeff_variance_greater_than_10_percent", "model_warning_mean", "MAPE_mean"], ascending=[True, True, True], inplace=True,
+        by=[
+            "coeff_variance_greater_than_10_percent",
+            "model_warning_mean",
+            "MAPE_mean",
+        ],
+        ascending=[True, True, True],
+        inplace=True,
     )
     ac_df.reset_index(inplace=True)
-    ac_df.to_csv("{}-equation-results-MAPE-2021-07-21.csv".format(y[0]))
+    ac_df.to_csv("{}-equation-results-aq-MAPE-2021-07-21.csv".format(y[0]))
