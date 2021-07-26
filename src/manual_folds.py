@@ -27,6 +27,24 @@ def adjusted_r_2(r_2, n, k):
     return 1 - ((1 - r_2) * (n - 1) / (n - k - 1))
 
 
+def has_negative_or_greater_than_tdd_basal_rayhan_equation():
+    valid_ttds = range(0, 201, 20)
+    valid_carbs = range(0, 1001, 50)
+
+    for carb in valid_carbs:
+        for tdd in valid_ttds:
+            prediction = equation_utils.jaeb_basal_equation(tdd, carb)
+            if prediction > tdd:
+                print(
+                    f"Found basal equation with prediction ({prediction}) > TDD ({tdd})"
+                )
+                return True
+            elif prediction < 0:
+                print(f"Found basal equation with prediction ({prediction}) < 0")
+                return True
+    return False
+
+
 # Take a list of input parameter names and return the list
 # of the appropriate coefficient values (computed using the provided lookup_dict)
 def get_model_inputs(value_lookup_dict, model_parameters):
@@ -620,6 +638,11 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
 
         ac_df.loc[new_col, "coeff_variance_greater_than_10_percent"] = False
         ac_df.loc[new_col, "model_warning_mean"] = False
+        ac_df.loc[new_col, "pred_greater_than_tdd"] = (
+            has_negative_or_greater_than_tdd_basal_rayhan_equation()
+            if new_col == "rayhan_basal_pred"
+            else False
+        )
 
     ac_df.sort_values(
         by=[
