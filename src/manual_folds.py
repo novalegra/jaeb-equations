@@ -27,45 +27,82 @@ def adjusted_r_2(r_2, n, k):
     return 1 - ((1 - r_2) * (n - 1) / (n - k - 1))
 
 
-# Take a list of input parameters and return the list with only
-# the parameters that are turned 'on', as per the parameter combination settings
-def get_model_inputs(potential_inputs, parameter_settings):
-    assert len(potential_inputs) == len(parameter_settings)
-    output = []
-    for _input, setting in zip(potential_inputs, parameter_settings):
-        if setting != "off":
-            output.append(_input)
+def has_negative_or_greater_than_tdd_basal_rayhan_equation():
+    valid_ttds = range(0, 201, 20)
+    valid_carbs = range(0, 1001, 50)
 
+    for carb in valid_carbs:
+        for tdd in valid_ttds:
+            prediction = equation_utils.jaeb_basal_equation(tdd, carb)
+            if prediction > tdd:
+                print(
+                    f"Found basal equation with prediction ({prediction}) > TDD ({tdd})"
+                )
+                return True
+            elif prediction < 0:
+                print(f"Found basal equation with prediction ({prediction}) < 0")
+                return True
+    return False
+
+
+# Take a list of input parameter names and return the list
+# of the appropriate coefficient values (computed using the provided lookup_dict)
+def get_model_inputs(value_lookup_dict, model_parameters):
+    output = []
+    for parameter in model_parameters:
+        output.append(value_lookup_dict[parameter])
     return output
 
 
-def no_basal_greater_than_tdd(equation, combo_list):
-    model_params = combo_list[2:]
-    bmi_setting, carb_setting, tdd_setting = model_params
-
-    not_selected = "off"
-
-    if tdd_setting == not_selected:
-        return True
-
+def has_negative_or_greater_than_tdd_basal(equation, model_params):
     # Only loop through params that are turned 'on'
-    valid_carbs = range(0, 1001, 50) if carb_setting != not_selected else range(1)
-    valid_bmis = range(0, 101, 10) if bmi_setting != not_selected else range(1)
-    valid_ttds = range(0, 201, 20)
+    if "BMI" in model_params:
+        valid_bmis = range(0, 101, 10)
+    elif "log_BMI" in model_params:
+        valid_bmis = (x * 0.01 for x in range(0, 451, 45))
+    else:
+        valid_bmis = range(1)
+
+    if "CHO" in model_params:
+        valid_carbs = range(0, 1001, 50)
+    elif "log_CHO" in model_params:
+        valid_carbs = (x * 0.01 for x in range(0, 691, 35))
+    else:
+        valid_carbs = range(1)
+
+    if "TDD" in model_params:
+        valid_ttds = range(0, 201, 20)
+    elif "log_TDD" in model_params:
+        valid_ttds = (x * 0.01 for x in range(0, 531, 53))
+    else:
+        valid_ttds = range(1)
 
     for carb in valid_carbs:
         for bmi in valid_bmis:
             for tdd in valid_ttds:
+                lookup_dict = {
+                    "TDD": tdd,
+                    "log_TDD": tdd,
+                    "CHO": carb,
+                    "log_CHO": carb,
+                    "BMI": bmi,
+                    "log_BMI": bmi,
+                }
+
                 prediction = equation.predict(
-                    np.array([get_model_inputs([carb, bmi, tdd], model_params)])
+                    np.array([get_model_inputs(lookup_dict, model_params)])
                 )
+
                 if prediction > tdd:
                     print(
                         f"Found basal equation with prediction ({prediction}) > TDD ({tdd})"
                     )
-                    return False
+                    return True
+                elif prediction < 0:
+                    print(f"Found basal equation with prediction ({prediction}) < 0")
+                    return True
 
-    return True
+    return False
 
 
 def should_plot(combo_list):
@@ -199,8 +236,9 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
     ac_df = pd.DataFrame(all_combos, columns=["y", "intercept", "BMI", "CHO", "TDD"])
 
     ac_df["n_params"] = np.nan
-    ac_df["coeff_variance_greater_than_10_percent"] = np.nan
     ac_df["MAPE_mean"] = np.nan
+    ac_df["coeff_variance_greater_than_10_percent"] = np.nan
+    ac_df["pred_greater_than_tdd"] = np.nan
     ac_df["model_warning_mean"] = np.nan
 
     for pm in ["intercept", "BMI", "CHO", "TDD"]:
@@ -279,7 +317,6 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
             res_scaled = stats_mod_scaled.fit()
             for idx in res_scaled.params.index:
                 ac_df.loc[combo, "{}_scaled".format(idx)] = res_scaled.params[idx]
-                print(res_scaled.params[idx])
 
             if fit_intercept:
                 stats_mod = sm.OLS(y_train[y_lin_log], sm.add_constant(X_train[X_cols]))
@@ -295,7 +332,7 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
             else:
                 has_warning = False
             ac_df.loc[combo, "pred_greater_than_tdd"] = (
-                no_basal_greater_than_tdd(huber_regr, list(ac))
+                has_negative_or_greater_than_tdd_basal(huber_regr, X_cols)
                 if "BASAL" in list(ac)[0]
                 else False
             )
@@ -368,9 +405,9 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
                     y_predict = np.exp(y_predict)
 
                 h = Huber(delta=1.35)
-                ac_df.loc[
-                    combo, "huber_loss_fold{}".format(fold)
-                ] = h(y_val_data, y_predict).numpy()
+                ac_df.loc[combo, "huber_loss_fold{}".format(fold)] = h(
+                    y_val_data, y_predict
+                ).numpy()
 
                 ac_df.loc[
                     combo, "MAPE_fold{}".format(fold)
@@ -513,34 +550,46 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
             # BASAL EQUATIONS
             if "rayhan_basal_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.jaeb_basal_equation(x["TDD"], x["CHO"]), axis=1
+                    lambda x: equation_utils.jaeb_basal_equation(x["TDD"], x["CHO"]),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             if "trad_basal_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.traditional_constants_basal_equation(x["TDD"]), axis=1
+                    lambda x: equation_utils.traditional_constants_basal_equation(
+                        x["TDD"]
+                    ),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             # ISF EQUATIONS
             if "rayhan_isf_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]), axis=1
+                    lambda x: equation_utils.jaeb_isf_equation(x["TDD"], x["BMI"]),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             if "trad_isf_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.traditional_constants_isf_equation(x["TDD"]), axis=1
+                    lambda x: equation_utils.traditional_constants_isf_equation(
+                        x["TDD"]
+                    ),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             # CIR EQUATIONS
             if "rayhan_icr_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]), axis=1
+                    lambda x: equation_utils.jaeb_icr_equation(x["TDD"], x["CHO"]),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             if "trad_icr_pred" in new_col:
                 y_predict = X_val_fold.apply(
-                    lambda x: equation_utils.traditional_constants_icr_equation(x["TDD"]), axis=1
+                    lambda x: equation_utils.traditional_constants_icr_equation(
+                        x["TDD"]
+                    ),
+                    axis=1,
                 ).values.reshape(-1, 1)
 
             ac_df.loc[
@@ -589,9 +638,21 @@ for y in [["BASAL", "log_BASAL"], ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
 
         ac_df.loc[new_col, "coeff_variance_greater_than_10_percent"] = False
         ac_df.loc[new_col, "model_warning_mean"] = False
+        ac_df.loc[new_col, "pred_greater_than_tdd"] = (
+            has_negative_or_greater_than_tdd_basal_rayhan_equation()
+            if new_col == "rayhan_basal_pred"
+            else False
+        )
 
     ac_df.sort_values(
-        by=["coeff_variance_greater_than_10_percent", "model_warning_mean", "MAPE_mean"], ascending=[True, True, True], inplace=True,
+        by=[
+            "pred_greater_than_tdd",
+            "coeff_variance_greater_than_10_percent",
+            "model_warning_mean",
+            "MAPE_mean",
+        ],
+        ascending=[True, True, True, True],
+        inplace=True,
     )
     ac_df.reset_index(inplace=True)
     ac_df.to_csv("{}-equation-results-MAPE-2021-07-21.csv".format(y[0]))
