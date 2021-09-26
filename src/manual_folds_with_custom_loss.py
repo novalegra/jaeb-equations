@@ -283,6 +283,9 @@ def fit_equ_with_custom_loss(
 
     return top_result_df, all_brute_results
 
+# start of code
+workers = -1  # set to 1 for debug mode and -1 to use all workers on your machine
+
 
 # load in data
 file_path = utils.find_full_path("2021-05-02_equation_paper_aspirational_data_reduced", ".csv")
@@ -383,7 +386,7 @@ for y in [["BASAL"]]:  # [["BASAL", "log_BASAL"]]:  #, ["ISF", "log_ISF"], ["CIR
             linear_regression_equation,
             custom_basal_loss_with_inf,
             verbose=False,
-            workers=1,  # -1
+            workers=workers,  # -1
         )
 
         for result_col in top_result.columns:
@@ -418,7 +421,7 @@ for y in [["BASAL"]]:  # [["BASAL", "log_BASAL"]]:  #, ["ISF", "log_ISF"], ["CIR
                 linear_regression_equation,
                 custom_basal_loss_with_inf,
                 verbose=False,
-                workers=1,  # -1
+                workers=workers,  # -1
             )
 
             # add in the rayhan and traditional equations here and run on custom loss function
