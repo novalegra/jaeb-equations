@@ -19,6 +19,7 @@ def make_condition_dicts(file_name):
             "TDD": all_conditions["TDD"][index],
             "MIN_OUTPUT": all_conditions["MIN_OUTPUT"][index],
             "MAX_OUTPUT": all_conditions["MAX_OUTPUT"][index],
+            "X_intercept": 1,
         }
         output.append(condition_dict)
 
