@@ -7,6 +7,27 @@ from scipy import optimize
 from sklearn.model_selection import KFold, train_test_split
 
 
+def make_condition_dicts(file_name):
+    file_path = utils.find_full_path(file_name, ".csv")
+    all_conditions = pd.read_csv(file_path)
+    output = []
+
+    for index in all_conditions.index:
+        condition_dict = {
+            "BMI": all_conditions["BMI"][index],
+            "CHO": all_conditions["CHO"][index],
+            "TDD": all_conditions["TDD"][index],
+            "MIN_OUTPUT": all_conditions["MIN_OUTPUT"][index],
+            "MAX_OUTPUT": all_conditions["MAX_OUTPUT"][index],
+        }
+        output.append(condition_dict)
+
+    return output
+
+
+basal_check_dicts = make_condition_dicts("basal_fitting_checks")
+
+
 def brute_optimize(
     X_df,
     y_df,
