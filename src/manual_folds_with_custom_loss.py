@@ -15,8 +15,11 @@ def make_condition_dicts(file_name):
     for index in all_conditions.index:
         condition_dict = {
             "BMI": all_conditions["BMI"][index],
+            "log_BMI": np.log(all_conditions["BMI"][index]),
             "CHO": all_conditions["CHO"][index],
+            "log_CHO": np.log(all_conditions["CHO"][index]),
             "TDD": all_conditions["TDD"][index],
+            "log_TDD": np.log(all_conditions["TDD"][index]),
             "MIN_OUTPUT": all_conditions["MIN_OUTPUT"][index],
             "MAX_OUTPUT": all_conditions["MAX_OUTPUT"][index],
             "X_intercept": 1,
