@@ -335,6 +335,10 @@ def fit_equ_with_custom_loss(
     top_wide_search_df.reset_index(drop=True, inplace=True)
     # print("that took {} seconds".format(time.time() - start_time))
 
+    # If we couldn't find a non-inf loss, we failed to find a fit
+    if len(top_wide_search_df) < 1:
+        return None, None, False
+
     # do one last brute force search
     parameter_search_range_list = []
     steps = 32
@@ -370,7 +374,7 @@ def fit_equ_with_custom_loss(
     # valid_results_df = all_brute_results.loc[all_brute_results["loss"] != np.inf, :].copy()
     top_result_df = all_brute_results.loc[0:0, :]
 
-    return top_result_df, all_brute_results
+    return top_result_df, all_brute_results, True
 
 
 # start of code
@@ -479,6 +483,10 @@ for y in [
             verbose=False,
             workers=workers,  # -1
         )
+
+        if not success:
+            print(f"ERROR: unable to find fit for {list(ac)} parameters")
+            continue
 
         for result_col in top_result.columns:
             if result_col == "train_loss":
