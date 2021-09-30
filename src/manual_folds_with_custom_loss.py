@@ -94,7 +94,8 @@ def brute_optimize(
         X_ndarray,
         y_df.values,
         verbose,
-    )  # , X_col_names)
+        X_col_names,
+    )
 
     brute_results = optimize.brute(
         objective_function,
@@ -176,13 +177,18 @@ def custom_objective_function(parameters_to_estimate_1darray, *args_tuple):
         fixed_parameters_ndarray,
         y_actual,
         verbose,
+        X_col_names,
     ) = args_tuple
     y_estimate = equation_function(
         parameters_to_estimate_1darray, fixed_parameters_ndarray
     )
     loss_score = loss_function(
-        y_actual, y_estimate
-    )  # , equation_function, parameters_to_estimate_1darray)
+        y_actual,
+        y_estimate,
+        equation_function,
+        parameters_to_estimate_1darray,
+        X_col_names,
+    )
     if verbose:
         print(parameters_to_estimate_1darray, loss_score)
     return loss_score
@@ -199,7 +205,9 @@ def sum_of_squared_errors_loss_function(y_actual, y_estimate):
     return np.sum((y_estimate - y_actual) ** 2)
 
 
-def custom_basal_loss_with_inf(y_actual, y_estimate, delta=0.65):
+def custom_basal_loss_with_inf(
+    y_actual, y_estimate, equation, parameters_to_estimate, X_col_names, delta=0.65
+):
     epsilon = np.finfo(np.float64).eps
     residuals = y_estimate - y_actual
 
@@ -453,7 +461,7 @@ for y in [
         # fit with custom loss function
         X_df = pd.DataFrame(X_train[X_cols])
         y_df = pd.DataFrame(y_train[y_lin_log])
-        top_result, all_results = fit_equ_with_custom_loss(
+        top_result, all_results, success = fit_equ_with_custom_loss(
             X_df,
             y_df,
             custom_objective_function,
@@ -505,12 +513,18 @@ for y in [
             # run fit model on validation set
             X_df_val = pd.DataFrame(X_val_fold[X_cols])
             y_df_val = pd.DataFrame(y_val_fold[y_lin_log])
-            y_predict = linear_regression_equation(
-                top_result.loc[0, X_cols].values, X_df_val.values
-            )
+            fixed_parameters = top_result.loc[0, X_cols].values
+            vals = X_df_val.values
+            y_predict = linear_regression_equation(fixed_parameters, X_df_val.values)
             if "log" in y_lin_log:
                 y_predict = np.exp(y_predict)
-            val_loss = custom_basal_loss_with_inf(y_df_val.values, y_predict)
+            val_loss = custom_basal_loss_with_inf(
+                y_df_val.values,
+                y_predict,
+                linear_regression_equation,
+                fixed_parameters,
+                X_col_names,
+            )
             ac_df.loc[combo, "fold_{}_val_loss".format(fold)] = val_loss
             for result_col in top_result.columns:
                 ac_df.loc[
