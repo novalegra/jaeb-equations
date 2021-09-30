@@ -13,7 +13,7 @@ def make_condition_dicts(file_name):
     output = []
 
     # Small constant to ensure log is never zero
-    log_constant = 0.1
+    log_constant = 1
 
     for index in all_conditions.index:
         condition_dict = {
@@ -417,15 +417,18 @@ clean_data = all_data[np.sum(all_data <= 0, axis=1) == 0].copy()
 clean_data.reset_index(drop=True, inplace=True)
 
 # calculate logs of values
+# add a constant so the term is never 0
+log_constant = 1
+
 clean_data["X_intercept"] = 1
 clean_data["BASAL"] = clean_data["BR"] * 24
-clean_data["log_BASAL"] = np.log(clean_data["BASAL"])
-clean_data["log_BR"] = np.log(clean_data["BR"])
-clean_data["log_ISF"] = np.log(clean_data["ISF"])
-clean_data["log_CIR"] = np.log(clean_data["CIR"])
-clean_data["log_BMI"] = np.log(clean_data["BMI"])
-clean_data["log_CHO"] = np.log(clean_data["CHO"])
-clean_data["log_TDD"] = np.log(clean_data["TDD"])
+clean_data["log_BASAL"] = np.log(clean_data["BASAL"] + log_constant)
+clean_data["log_BR"] = np.log(clean_data["BR"] + log_constant)
+clean_data["log_ISF"] = np.log(clean_data["ISF"] + log_constant)
+clean_data["log_CIR"] = np.log(clean_data["CIR"] + log_constant)
+clean_data["log_BMI"] = np.log(clean_data["BMI"] + log_constant)
+clean_data["log_CHO"] = np.log(clean_data["CHO"] + log_constant)
+clean_data["log_TDD"] = np.log(clean_data["TDD"] + log_constant)
 
 y_cols = ["BASAL", "log_BASAL", "ISF", "log_ISF", "CIR", "log_CIR"]
 
