@@ -242,6 +242,15 @@ def custom_basal_loss_with_inf(
     # %% this is where we can add in the 19 checks
     # this will look something like y_temp = equation(add in constants from our table (look at google doc)
     # y_temp needs to between min and max basal
+    for check_dict in basal_check_dicts:
+        min_val = check_dict["MIN_OUTPUT"]
+        max_val = check_dict["MAX_OUTPUT"]
+
+        fixed_parameters = [check_dict[param] for param in X_col_names]
+        y_pred = equation(parameters_to_estimate, fixed_parameters)
+        if not (min_val <= y_pred <= max_val):
+            loss_score = np.inf
+            break
 
     return loss_score
 
