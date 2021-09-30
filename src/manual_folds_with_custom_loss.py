@@ -518,7 +518,7 @@ for y in [
             # fit with custom loss function
             X_df_train = pd.DataFrame(X_train_fold[X_cols])
             y_df_train = pd.DataFrame(y_train_fold[y_lin_log])
-            top_result, all_results = fit_equ_with_custom_loss(
+            top_result, all_results, success = fit_equ_with_custom_loss(
                 X_df_train,
                 y_df_train,
                 custom_objective_function,
@@ -538,12 +538,14 @@ for y in [
             y_predict = linear_regression_equation(fixed_parameters, X_df_val.values)
             if "log" in y_lin_log:
                 y_predict = np.exp(y_predict)
+
+            fold_X_col_names = list(X_df_val.columns)
             val_loss = custom_basal_loss_with_inf(
                 y_df_val.values,
                 y_predict,
                 linear_regression_equation,
                 fixed_parameters,
-                X_col_names,
+                fold_X_col_names,
             )
             ac_df.loc[combo, "fold_{}_val_loss".format(fold)] = val_loss
             for result_col in top_result.columns:
