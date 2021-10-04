@@ -6,23 +6,23 @@ import utils
 from scipy import optimize
 from sklearn.model_selection import KFold, train_test_split
 
+# Small constant to ensure log is never zero
+LOG_CONSTANT = 1
+
 
 def make_condition_dicts(file_name):
     file_path = utils.find_full_path(file_name, ".csv")
     all_conditions = pd.read_csv(file_path)
     output = []
 
-    # Small constant to ensure log is never zero
-    log_constant = 1
-
     for index in all_conditions.index:
         condition_dict = {
             "BMI": all_conditions["BMI"][index],
-            "log_BMI": np.log(all_conditions["BMI"][index] + log_constant),
+            "log_BMI": np.log(all_conditions["BMI"][index] + LOG_CONSTANT),
             "CHO": all_conditions["CHO"][index],
-            "log_CHO": np.log(all_conditions["CHO"][index] + log_constant),
+            "log_CHO": np.log(all_conditions["CHO"][index] + LOG_CONSTANT),
             "TDD": all_conditions["TDD"][index],
-            "log_TDD": np.log(all_conditions["TDD"][index] + log_constant),
+            "log_TDD": np.log(all_conditions["TDD"][index] + LOG_CONSTANT),
             "MIN_OUTPUT": all_conditions["MIN_OUTPUT"][index],
             "MAX_OUTPUT": all_conditions["MAX_OUTPUT"][index],
             "X_intercept": 1,
