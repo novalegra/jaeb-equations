@@ -242,18 +242,16 @@ def custom_basal_loss_with_inf(
     if n_y_too_high > 0:
         loss_score = np.inf
 
-    # %% this is where we can add in the 19 checks
-    # this will look something like y_temp = equation(add in constants from our table (look at google doc)
-    # y_temp needs to between min and max basal
-    for check_dict in basal_check_dicts:
-        min_val = check_dict["MIN_OUTPUT"]
-        max_val = check_dict["MAX_OUTPUT"]
+    # for i, check_dict in enumerate(basal_check_dicts):
+    #     min_val = check_dict["MIN_OUTPUT"]
+    #     max_val = check_dict["MAX_OUTPUT"]
 
-        fixed_parameters = [check_dict[param] for param in X_col_names]
-        y_pred = equation(parameters_to_estimate, fixed_parameters)
-        if not (min_val <= y_pred <= max_val):
-            loss_score = np.inf
-            break
+    #     fixed_parameters = [check_dict[param] for param in X_col_names]
+    #     y_pred = equation(parameters_to_estimate, fixed_parameters)
+    #     if not (min_val <= y_pred <= max_val):
+    #         # print(f"Failed on check {i}: !{min_val} <= {y_pred} <= {max_val} ")
+    #         loss_score = np.inf
+    #         break
 
     return loss_score
 
@@ -501,6 +499,8 @@ for y in [
                 ac_df.loc[combo, "beta_{}".format(result_col)] = top_result[
                     result_col
                 ].values
+
+        print(f"SUCCESS: Found fit for {list(ac)} parameters")
 
         # need to take an equation and run it through the custom loss function
         # need to correct the loss values for the log_basal results
