@@ -209,7 +209,7 @@ def sum_of_squared_errors_loss_function(y_actual, y_estimate):
 
 
 def custom_basal_loss_with_inf(
-    y_actual, y_estimate, equation, parameters_to_estimate, X_col_names, delta=0.65
+    y_actual, y_estimate, equation, fixed_parameters, X_col_names, delta=0.65
 ):
     epsilon = np.finfo(np.float64).eps
     residuals = y_estimate - y_actual
@@ -249,8 +249,8 @@ def custom_basal_loss_with_inf(
         min_val = check_dict["MIN_OUTPUT"]
         max_val = check_dict["MAX_OUTPUT"]
 
-        fixed_parameters = [check_dict[param] for param in X_col_names]
-        y_pred = equation(parameters_to_estimate, fixed_parameters)
+        X_val = [check_dict[param] for param in X_col_names]
+        y_pred = equation(fixed_parameters, X_val)
         if not (min_val <= y_pred <= max_val):
             loss_score = np.inf
             break
