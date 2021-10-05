@@ -3,11 +3,14 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import utils
+import parameter_graphs
 from scipy import optimize
 from sklearn.model_selection import KFold, train_test_split
 
 # Small constant to ensure log is never zero
 LOG_CONSTANT = 1
+# Whether to generate parameter relationship graphs
+MAKE_GRAPHS = False
 
 
 def make_condition_dicts(file_name):
@@ -502,6 +505,12 @@ for y in [
         if not success:
             print(f"ERROR: unable to find fit for {list(ac)} parameters")
             continue
+
+        if MAKE_GRAPHS:
+            fixed_parameters = top_result.loc[0, X_cols].values
+            parameter_graphs.make_graphs(
+                linear_regression_equation, fixed_parameters, X_cols, y_lin_log
+            )
 
         for result_col in top_result.columns:
             if result_col == "train_loss":
