@@ -98,6 +98,7 @@ def brute_optimize(
         y_df.values,
         verbose,
         X_col_names,
+        y_col_name,
     )
 
     brute_results = optimize.brute(
@@ -181,6 +182,7 @@ def custom_objective_function(parameters_to_estimate_1darray, *args_tuple):
         y_actual,
         verbose,
         X_col_names,
+        y_col_name,
     ) = args_tuple
     y_estimate = equation_function(
         parameters_to_estimate_1darray, fixed_parameters_ndarray
@@ -191,6 +193,7 @@ def custom_objective_function(parameters_to_estimate_1darray, *args_tuple):
         equation_function,
         parameters_to_estimate_1darray,
         X_col_names,
+        y_col_name,
     )
     if verbose:
         print(parameters_to_estimate_1darray, loss_score)
@@ -209,7 +212,13 @@ def sum_of_squared_errors_loss_function(y_actual, y_estimate):
 
 
 def custom_basal_loss_with_inf(
-    y_actual, y_estimate, equation, fixed_parameters, X_col_names, delta=0.65
+    y_actual,
+    y_estimate,
+    equation,
+    fixed_parameters,
+    X_col_names,
+    y_col_name,
+    delta=0.65,
 ):
     epsilon = np.finfo(np.float64).eps
     residuals = y_estimate - y_actual
@@ -251,6 +260,10 @@ def custom_basal_loss_with_inf(
 
         X_val = [check_dict[param] for param in X_col_names]
         y_pred = equation(fixed_parameters, X_val)
+
+        if "log" in y_col_name:
+            y_pred = np.exp(y_pred)
+
         if not (min_val <= y_pred <= max_val):
             loss_score = np.inf
             break
@@ -416,19 +429,15 @@ all_data.rename(
 clean_data = all_data[np.sum(all_data <= 0, axis=1) == 0].copy()
 clean_data.reset_index(drop=True, inplace=True)
 
-# calculate logs of values
-# add a constant so the term is never 0
-log_constant = 1
-
 clean_data["X_intercept"] = 1
 clean_data["BASAL"] = clean_data["BR"] * 24
-clean_data["log_BASAL"] = np.log(clean_data["BASAL"] + log_constant)
-clean_data["log_BR"] = np.log(clean_data["BR"] + log_constant)
-clean_data["log_ISF"] = np.log(clean_data["ISF"] + log_constant)
-clean_data["log_CIR"] = np.log(clean_data["CIR"] + log_constant)
-clean_data["log_BMI"] = np.log(clean_data["BMI"] + log_constant)
-clean_data["log_CHO"] = np.log(clean_data["CHO"] + log_constant)
-clean_data["log_TDD"] = np.log(clean_data["TDD"] + log_constant)
+clean_data["log_BASAL"] = np.log(clean_data["BASAL"] + LOG_CONSTANT)
+clean_data["log_BR"] = np.log(clean_data["BR"] + LOG_CONSTANT)
+clean_data["log_ISF"] = np.log(clean_data["ISF"] + LOG_CONSTANT)
+clean_data["log_CIR"] = np.log(clean_data["CIR"] + LOG_CONSTANT)
+clean_data["log_BMI"] = np.log(clean_data["BMI"] + LOG_CONSTANT)
+clean_data["log_CHO"] = np.log(clean_data["CHO"] + LOG_CONSTANT)
+clean_data["log_TDD"] = np.log(clean_data["TDD"] + LOG_CONSTANT)
 
 y_cols = ["BASAL", "log_BASAL", "ISF", "log_ISF", "CIR", "log_CIR"]
 
@@ -549,6 +558,7 @@ for y in [
                 linear_regression_equation,
                 fixed_parameters,
                 fold_X_col_names,
+                y_lin_log,
             )
             ac_df.loc[combo, "fold_{}_val_loss".format(fold)] = val_loss
             for result_col in top_result.columns:
