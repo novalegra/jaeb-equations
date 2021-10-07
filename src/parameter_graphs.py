@@ -1,3 +1,5 @@
+import equation_utils
+
 from itertools import product
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,12 +15,15 @@ def get_param_combos():
     return product(BMI_PARAMS, CARB_PARAMS)
 
 
-def make_graphs(equation, fixed_parameters, X_col_names, y_col_name):
+def make_graphs(
+    equation, fixed_parameters, X_col_names, y_col_name, title,
+):
     """
     equation: equation to use to generate plots
     parameters_to_estimate: coefficients of parameters in equation
     X_col_names: names of parameters in equation, in order of input
     y_col_name: name of y column
+    title: desired title of plot
     """
     if not (
         ("BMI" in X_col_names or "log_BMI" in X_col_names)
@@ -50,7 +55,9 @@ def make_graphs(equation, fixed_parameters, X_col_names, y_col_name):
             ylim=[min_y, max_y],
         )
 
-    fig.suptitle("Basal vs TDD")
+    fig.suptitle(title, weight="bold")
+    plt.setp(axs[-1, 1], xlabel="TDD")
+    plt.setp(axs[1, 0], ylabel=y_col_name)
     plt.tight_layout()
     plt.show()
 
