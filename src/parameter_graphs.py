@@ -72,7 +72,7 @@ def get_x_y(combo, equation, fixed_parameters, X_col_names, y_col_name):
         "X_intercept": 1,
     }
 
-    tdd_range = range(0, 500, 5)
+    tdd_range = range(5, 500, 5)
     y_preds = []
 
     for tdd in tdd_range:
@@ -107,7 +107,56 @@ def linear_regression_equation(
     return np.matmul(fixed_parameters_ndarray, parameters_to_estimate_1darray)
 
 
-# Example call
-make_graphs(
-    linear_regression_equation, [0.15, 0.5, 0.35], ["log_CHO", "log_TDD", "BMI"], "CARB"
-)
+def make_carb_comparison_plot():
+    y_col_name = "CIR"
+    fig, axs = plt.subplots(2, 3)
+
+    cache = []
+    max_y, min_y = -float("inf"), float("inf")
+
+    for i, combo in enumerate(CARB_PARAMS):
+        x, y = get_x_y(
+            (1, combo),
+            equation_utils.traditional_constants_icr_equation_empty_fixed,
+            [],
+            ["TDD"],
+            y_col_name,
+        )
+        max_y = max(max_y, max(y))
+        min_y = min(min_y, min(y))
+        cache.append((x, y, i, combo))
+
+    for i, combo in enumerate(CARB_PARAMS):
+        x, y = get_x_y(
+            (1, combo),
+            equation_utils.jaeb_icr_equation_empty_fixed,
+            [],
+            ["TDD", "CHO"],
+            y_col_name,
+        )
+        max_y = max(max_y, max(y)) + 5
+        min_y = min(min_y, min(y)) - 5
+        cache.append((x, y, i + len(CARB_PARAMS), combo))
+
+    for x, y, i, combo in cache:
+        make_graph(
+            axs[i // 3][i % 3], x, y, f"{combo} g Daily CHO", ylim=[min_y, max_y],
+        )
+
+    fig.suptitle("CIR vs TDD", weight="bold")
+    plt.setp(axs[-1, 1], xlabel="TDD")
+    plt.setp(axs[0, 0], ylabel="ACE Equation")
+    plt.setp(axs[1, 0], ylabel="Proposed Equation")
+    plt.tight_layout()
+    plt.show()
+
+
+# Example calls
+# make_graphs(
+#     linear_regression_equation,
+#     [0.15, 0.5, 0.35],
+#     ["log_CHO", "log_TDD", "BMI"],
+#     "Basal",
+#     "Basal vs TDD",
+# )
+# make_carb_comparison_plot()
