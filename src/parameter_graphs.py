@@ -6,6 +6,7 @@ import numpy as np
 
 BMI_PARAMS = [12, 25, 45]
 CARB_PARAMS = [0, 250, 500]
+CARB_GRAPH_PARAMS = list(range(50, 301, 50))
 
 # Small constant to ensure log is never zero
 LOG_CONSTANT = 1
@@ -62,7 +63,14 @@ def make_graphs(
     plt.show()
 
 
-def get_x_y(combo, equation, fixed_parameters, X_col_names, y_col_name):
+def get_x_y(
+    combo,
+    equation,
+    fixed_parameters,
+    X_col_names,
+    y_col_name,
+    tdd_range=range(5, 500, 5),
+):
     bmi, cho = combo
     param_dict = {
         "BMI": bmi,
@@ -72,7 +80,6 @@ def get_x_y(combo, equation, fixed_parameters, X_col_names, y_col_name):
         "X_intercept": 1,
     }
 
-    tdd_range = range(5, 500, 5)
     y_preds = []
 
     for tdd in tdd_range:
@@ -109,44 +116,50 @@ def linear_regression_equation(
 
 def make_carb_comparison_plot():
     y_col_name = "CIR"
-    fig, axs = plt.subplots(2, 3)
+    fig, axs = plt.subplots(2, len(CARB_GRAPH_PARAMS))
 
     cache = []
     max_y, min_y = -float("inf"), float("inf")
 
-    for i, combo in enumerate(CARB_PARAMS):
+    for i, combo in enumerate(CARB_GRAPH_PARAMS):
         x, y = get_x_y(
             (1, combo),
             equation_utils.traditional_constants_icr_equation_empty_fixed,
             [],
             ["TDD"],
             y_col_name,
+            tdd_range=range(5, 50, 5),
         )
         max_y = max(max_y, max(y))
         min_y = min(min_y, min(y))
         cache.append((x, y, i, combo))
 
-    for i, combo in enumerate(CARB_PARAMS):
+    for i, combo in enumerate(CARB_GRAPH_PARAMS):
         x, y = get_x_y(
             (1, combo),
             equation_utils.jaeb_icr_equation_empty_fixed,
             [],
             ["TDD", "CHO"],
             y_col_name,
+            tdd_range=range(5, 50, 5),
         )
-        max_y = max(max_y, max(y)) + 5
-        min_y = min(min_y, min(y)) - 5
-        cache.append((x, y, i + len(CARB_PARAMS), combo))
+        max_y = max(max_y, max(y))
+        min_y = min(min_y, min(y))
+        cache.append((x, y, i + len(CARB_GRAPH_PARAMS), combo))
 
     for x, y, i, combo in cache:
         make_graph(
-            axs[i // 3][i % 3], x, y, f"{combo} g Daily CHO", ylim=[min_y, max_y],
+            axs[i // len(CARB_GRAPH_PARAMS)][i % len(CARB_GRAPH_PARAMS)],
+            x,
+            y,
+            f"{combo} g\nCHO / day",
+            ylim=[min_y - 2, max_y + 2],
         )
 
     fig.suptitle("CIR vs TDD", weight="bold")
-    plt.setp(axs[-1, 1], xlabel="TDD")
-    plt.setp(axs[0, 0], ylabel="ACE Equation")
-    plt.setp(axs[1, 0], ylabel="Proposed Equation")
+    plt.setp(axs[-1, 0], xlabel="TDD (units/day)")
+    plt.setp(axs[0, 0], ylabel="Traditional CIR\n(g CHO/unit)")
+    plt.setp(axs[1, 0], ylabel="Proposed CIR\n(g CHO/unit)")
     plt.tight_layout()
     plt.show()
 
@@ -159,4 +172,4 @@ def make_carb_comparison_plot():
 #     "Basal",
 #     "Basal vs TDD",
 # )
-# make_carb_comparison_plot()
+make_carb_comparison_plot()
