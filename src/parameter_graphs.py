@@ -70,6 +70,7 @@ def get_x_y(
     X_col_names,
     y_col_name,
     tdd_range=range(5, 500, 5),
+    log_scale=False,
 ):
     bmi, cho = combo
     param_dict = {
@@ -94,14 +95,22 @@ def get_x_y(
         elif "log" in y_col_name:
             y_predict = np.exp(y_predict)
 
-        y_preds.append(y_predict)
+        if log_scale:
+            y_preds.append(np.log(y_predict))
+        else:
+            y_preds.append(y_predict)
+
+    if log_scale:
+        tdd_range = [np.log(val) for val in tdd_range]
 
     return tdd_range, y_preds
 
 
-def make_graph(ax, x, y, title, ylim=None):
-    ax.plot(x, y)
-    ax.set_title(title)
+def make_graph(ax, x, y, title=None, ylim=None, label=""):
+    ax.plot(x, y, label=label)
+
+    if title is not None:
+        ax.set_title(title)
 
     if ylim is not None:
         ax.set_ylim(ylim)
@@ -116,12 +125,12 @@ def linear_regression_equation(
 
 def make_carb_comparison_plot():
     y_col_name = "CIR"
-    fig, axs = plt.subplots(2, len(CARB_GRAPH_PARAMS))
+    fig, axs = plt.gcf(), plt.gca()
 
     cache = []
     max_y, min_y = -float("inf"), float("inf")
 
-    for i, combo in enumerate(CARB_GRAPH_PARAMS):
+    for i, combo in enumerate(CARB_GRAPH_PARAMS[0:1]):
         x, y = get_x_y(
             (1, combo),
             equation_utils.traditional_constants_icr_equation_empty_fixed,
@@ -129,6 +138,7 @@ def make_carb_comparison_plot():
             ["TDD"],
             y_col_name,
             tdd_range=range(5, 50, 5),
+            log_scale=True,
         )
         max_y = max(max_y, max(y))
         min_y = min(min_y, min(y))
@@ -142,6 +152,7 @@ def make_carb_comparison_plot():
             ["TDD", "CHO"],
             y_col_name,
             tdd_range=range(5, 50, 5),
+            log_scale=True,
         )
         max_y = max(max_y, max(y))
         min_y = min(min_y, min(y))
@@ -149,17 +160,14 @@ def make_carb_comparison_plot():
 
     for x, y, i, combo in cache:
         make_graph(
-            axs[i // len(CARB_GRAPH_PARAMS)][i % len(CARB_GRAPH_PARAMS)],
-            x,
-            y,
-            f"{combo} g\nCHO / day",
-            ylim=[min_y - 2, max_y + 2],
+            axs, x, y, label=f"{combo} g CHO / day", ylim=[min_y - 2, max_y + 2],
         )
 
+    axs.legend()
     fig.suptitle("CIR vs TDD", weight="bold")
-    plt.setp(axs[-1, 0], xlabel="TDD (units/day)")
-    plt.setp(axs[0, 0], ylabel="Traditional CIR\n(g CHO/unit)")
-    plt.setp(axs[1, 0], ylabel="Proposed CIR\n(g CHO/unit)")
+    plt.setp(axs, xlabel="TDD (units/day)")
+    plt.setp(axs, ylabel="Traditional CIR\n(g CHO/unit)")
+    plt.setp(axs, ylabel="Proposed CIR\n(g CHO/unit)")
     plt.tight_layout()
     plt.show()
 
@@ -172,4 +180,4 @@ def make_carb_comparison_plot():
 #     "Basal",
 #     "Basal vs TDD",
 # )
-# make_carb_comparison_plot()
+make_carb_comparison_plot()
