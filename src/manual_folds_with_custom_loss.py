@@ -471,7 +471,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 asdf = 4
-num_combos = 2
+num_combos = 6
 
 fit_df = pd.DataFrame(columns=["check_index", "combo_index", "found_fit"])
 
