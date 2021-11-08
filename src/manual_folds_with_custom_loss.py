@@ -471,131 +471,146 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 asdf = 4
-# loop through each of the 3 independent variables
-for y in [
-    ["BASAL"]
-]:  # [["BASAL", "log_BASAL"]]:  #, ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
-    print("solving for the {} equations".format(y[0]))
+num_combos = 2
 
-    # consider all combinations
-    intercept = ["X_intercept"]
-    bmi = ["off", "BMI", "log_BMI"]
-    cho = ["off", "CHO", "log_CHO"]
-    tdd = ["off", "TDD", "log_TDD"]
-    all_combos = list(product(y, intercept, bmi, cho, tdd))
-    ac_df = pd.DataFrame(all_combos, columns=["y", "X_intercept", "BMI", "CHO", "TDD"])
-    ac_df["val_loss"] = np.nan
-    for x_beta in x_cols:
-        ac_df["beta_{}".format(x_beta)] = np.nan
+fit_df = pd.DataFrame(columns=["check_index", "combo_index", "found_fit"])
 
-    for combo, ac in enumerate(all_combos):
-        print(combo, list(ac))
-        [y_lin_log, x_intercept, bmi_lin_log, cho_lin_log, tdd_lin_log] = ac
+for check_dict_index in range(len(basal_check_dicts)):
+    # loop through each of the 3 independent variables
+    for y in [
+        ["BASAL"]
+    ]:  # [["BASAL", "log_BASAL"]]:  #, ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
+        print("solving for the {} equations".format(y[0]))
 
-        X_cols = [x_intercept, bmi_lin_log, cho_lin_log, tdd_lin_log]
-        X_cols = list(set(X_cols))
-        if "off" in X_cols:
-            X_cols.remove("off")
-
-        # fit with custom loss function
-        X_df = pd.DataFrame(X_train[X_cols])
-        y_df = pd.DataFrame(y_train[y_lin_log])
-        top_result, all_results, success = fit_equ_with_custom_loss(
-            X_df,
-            y_df,
-            custom_objective_function,
-            linear_regression_equation,
-            custom_basal_loss_with_inf,
-            verbose=False,
-            workers=workers,  # -1
+        # consider all combinations
+        intercept = ["X_intercept"]
+        bmi = ["off", "BMI", "log_BMI"]
+        cho = ["off", "CHO", "log_CHO"]
+        tdd = ["off", "TDD", "log_TDD"]
+        all_combos = list(product(y, intercept, bmi, cho, tdd))
+        ac_df = pd.DataFrame(
+            all_combos, columns=["y", "X_intercept", "BMI", "CHO", "TDD"]
         )
+        ac_df["val_loss"] = np.nan
+        for x_beta in x_cols:
+            ac_df["beta_{}".format(x_beta)] = np.nan
 
-        if not success:
-            print(f"ERROR: unable to find fit for {list(ac)} parameters")
-            continue
+        for combo, ac in enumerate(all_combos[0:num_combos]):
+            print(combo, list(ac))
+            [y_lin_log, x_intercept, bmi_lin_log, cho_lin_log, tdd_lin_log] = ac
 
-        if MAKE_GRAPHS:
-            fixed_parameters = top_result.loc[0, X_cols].values
-            parameter_graphs.make_graphs(
-                linear_regression_equation, fixed_parameters, X_cols, y_lin_log
-            )
-
-        for result_col in top_result.columns:
-            if result_col == "train_loss":
-                ac_df.loc[combo, "train_loss"] = top_result[result_col].values
-            else:
-                ac_df.loc[combo, "beta_{}".format(result_col)] = top_result[
-                    result_col
-                ].values
-
-        # need to take an equation and run it through the custom loss function
-        # need to correct the loss values for the log_basal results
-        # double check that the seeds do not change
-        # see if there are issues with the searching the log space
-
-        # break the training set into 5 folds for model selection with cross validation
-        kf = KFold(n_splits=5)
-        fold = 0
-        for i, j in kf.split(X_train):
-            fold = fold + 1
-            print("starting fold {}".format(fold))
-            X_train_fold = X_train.iloc[i, :]
-            X_val_fold = X_train.iloc[j, :]
-            y_train_fold = y_train.iloc[i, :]
-            y_val_fold = y_train.iloc[j, :]
+            X_cols = [x_intercept, bmi_lin_log, cho_lin_log, tdd_lin_log]
+            X_cols = list(set(X_cols))
+            if "off" in X_cols:
+                X_cols.remove("off")
 
             # fit with custom loss function
-            X_df_train = pd.DataFrame(X_train_fold[X_cols])
-            y_df_train = pd.DataFrame(y_train_fold[y_lin_log])
+            X_df = pd.DataFrame(X_train[X_cols])
+            y_df = pd.DataFrame(y_train[y_lin_log])
             top_result, all_results, success = fit_equ_with_custom_loss(
-                X_df_train,
-                y_df_train,
+                X_df,
+                y_df,
                 custom_objective_function,
                 linear_regression_equation,
                 custom_basal_loss_with_inf,
+                check_dict_index,
                 verbose=False,
                 workers=workers,  # -1
             )
 
-            # add in the rayhan and traditional equations here and run on custom loss function
+            fit_df.loc[len(fit_df.index)] = [check_dict_index, combo, success]
 
-            # run fit model on validation set
-            X_df_val = pd.DataFrame(X_val_fold[X_cols])
-            y_df_val = pd.DataFrame(y_val_fold[y_lin_log])
-            fixed_parameters = top_result.loc[0, X_cols].values
-            vals = X_df_val.values
-            y_predict = linear_regression_equation(fixed_parameters, X_df_val.values)
-            if "log" in y_lin_log:
-                y_predict = np.exp(y_predict)
+            if not success:
+                print(f"ERROR: unable to find fit for {list(ac)} parameters")
+                continue
 
-            fold_X_col_names = list(X_df_val.columns)
-            val_loss = custom_basal_loss_with_inf(
-                y_df_val.values,
-                y_predict,
-                linear_regression_equation,
-                fixed_parameters,
-                fold_X_col_names,
-                y_lin_log,
-            )
-            ac_df.loc[combo, "fold_{}_val_loss".format(fold)] = val_loss
-            for result_col in top_result.columns:
-                ac_df.loc[
-                    combo, "fold_{}_train_{}".format(fold, result_col)
-                ] = top_result[result_col].values
-
-            if fold == 5:
-                val_fold_loss_list = []
-                for f in range(1, fold + 1):
-                    val_fold_loss_list.append(
-                        ac_df.loc[combo, "fold_{}_val_loss".format(f)]
-                    )
-
-                val_fold_loss_array = np.array(val_fold_loss_list)
-
-                avg_val_loss = np.mean(
-                    val_fold_loss_array[val_fold_loss_array < np.inf]
+            if MAKE_GRAPHS:
+                fixed_parameters = top_result.loc[0, X_cols].values
+                parameter_graphs.make_graphs(
+                    linear_regression_equation, fixed_parameters, X_cols, y_lin_log
                 )
-                ac_df.loc[combo, "val_loss"] = avg_val_loss
+
+            for result_col in top_result.columns:
+                if result_col == "train_loss":
+                    ac_df.loc[combo, "train_loss"] = top_result[result_col].values
+                else:
+                    ac_df.loc[combo, "beta_{}".format(result_col)] = top_result[
+                        result_col
+                    ].values
+
+            # need to take an equation and run it through the custom loss function
+            # need to correct the loss values for the log_basal results
+            # double check that the seeds do not change
+            # see if there are issues with the searching the log space
+
+            # break the training set into 5 folds for model selection with cross validation
+            kf = KFold(n_splits=5)
+            fold = 0
+            for i, j in kf.split(X_train):
+                fold = fold + 1
+                print("starting fold {}".format(fold))
+                X_train_fold = X_train.iloc[i, :]
+                X_val_fold = X_train.iloc[j, :]
+                y_train_fold = y_train.iloc[i, :]
+                y_val_fold = y_train.iloc[j, :]
+
+                # fit with custom loss function
+                X_df_train = pd.DataFrame(X_train_fold[X_cols])
+                y_df_train = pd.DataFrame(y_train_fold[y_lin_log])
+                top_result, all_results, success = fit_equ_with_custom_loss(
+                    X_df_train,
+                    y_df_train,
+                    custom_objective_function,
+                    linear_regression_equation,
+                    custom_basal_loss_with_inf,
+                    check_dict_index,
+                    verbose=False,
+                    workers=workers,  # -1
+                )
+
+                # add in the rayhan and traditional equations here and run on custom loss function
+
+                # run fit model on validation set
+                X_df_val = pd.DataFrame(X_val_fold[X_cols])
+                y_df_val = pd.DataFrame(y_val_fold[y_lin_log])
+                fixed_parameters = top_result.loc[0, X_cols].values
+                vals = X_df_val.values
+                y_predict = linear_regression_equation(
+                    fixed_parameters, X_df_val.values
+                )
+                if "log" in y_lin_log:
+                    y_predict = np.exp(y_predict)
+
+                fold_X_col_names = list(X_df_val.columns)
+                val_loss = custom_basal_loss_with_inf(
+                    y_df_val.values,
+                    y_predict,
+                    linear_regression_equation,
+                    fixed_parameters,
+                    fold_X_col_names,
+                    y_lin_log,
+                    check_dict_index,
+                )
+                ac_df.loc[combo, "fold_{}_val_loss".format(fold)] = val_loss
+                for result_col in top_result.columns:
+                    ac_df.loc[
+                        combo, "fold_{}_train_{}".format(fold, result_col)
+                    ] = top_result[result_col].values
+
+                if fold == 5:
+                    val_fold_loss_list = []
+                    for f in range(1, fold + 1):
+                        val_fold_loss_list.append(
+                            ac_df.loc[combo, "fold_{}_val_loss".format(f)]
+                        )
+
+                    val_fold_loss_array = np.array(val_fold_loss_list)
+
+                    avg_val_loss = np.mean(
+                        val_fold_loss_array[val_fold_loss_array < np.inf]
+                    )
+                    ac_df.loc[combo, "val_loss"] = avg_val_loss
 
 ac_df.reset_index(inplace=True)
 ac_df.to_csv("{}-equation-results-MAPE-2021-09-26.csv".format(y[0]))
+fit_df.to_csv("{}-equation-check-search-results-MAPE-2021-09-26.csv".format(y[0]))
