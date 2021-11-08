@@ -46,7 +46,7 @@ def brute_optimize(
     equation_function,
     loss_function,
     loss_check_index,
-    find_al_min_function=None,
+    find_local_min_function=None,
     verbose=False,
     workers=-1,
 ):
@@ -77,7 +77,7 @@ def brute_optimize(
         The equation you are trying to fit.
     loss_function : function
         A function with the first two argumets as (y_actual, y_predict) for compatibility with sklearn
-    find_al_min_function : function
+    find_local_min_function : function
         Default to None, optimize.fmin is another option
 
 
@@ -305,7 +305,7 @@ def fit_equ_with_custom_loss(
                 equation_function=linear_regression_equation,
                 loss_function=custom_basal_loss_with_inf,
                 loss_check_index=selected_loss_check_index,
-                find_al_min_function=None,  # None,  #optimize.fmin,
+                find_local_min_function=None,  # None,  #optimize.fmin,
                 verbose=verbose,
                 workers=workers,
             )
