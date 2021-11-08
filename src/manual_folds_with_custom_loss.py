@@ -45,7 +45,8 @@ def brute_optimize(
     parameter_search_range_tuple,
     equation_function,
     loss_function,
-    find_local_min_function=None,
+    loss_check_index,
+    find_al_min_function=None,
     verbose=False,
     workers=-1,
 ):
@@ -76,7 +77,7 @@ def brute_optimize(
         The equation you are trying to fit.
     loss_function : function
         A function with the first two argumets as (y_actual, y_predict) for compatibility with sklearn
-    find_local_min_function : function
+    find_al_min_function : function
         Default to None, optimize.fmin is another option
 
 
@@ -102,6 +103,7 @@ def brute_optimize(
         verbose,
         X_col_names,
         y_col_name,
+        loss_check_index,
     )
 
     brute_results = optimize.brute(
@@ -186,6 +188,7 @@ def custom_objective_function(parameters_to_estimate_1darray, *args_tuple):
         verbose,
         X_col_names,
         y_col_name,
+        check_index,
     ) = args_tuple
     y_estimate = equation_function(
         parameters_to_estimate_1darray, fixed_parameters_ndarray
@@ -197,6 +200,7 @@ def custom_objective_function(parameters_to_estimate_1darray, *args_tuple):
         parameters_to_estimate_1darray,
         X_col_names,
         y_col_name,
+        check_index,
     )
     if verbose:
         print(parameters_to_estimate_1darray, loss_score)
@@ -221,6 +225,7 @@ def custom_basal_loss_with_inf(
     fixed_parameters,
     X_col_names,
     y_col_name,
+    selected_check,
     delta=0.65,
 ):
     epsilon = np.finfo(np.float64).eps
@@ -254,10 +259,9 @@ def custom_basal_loss_with_inf(
     if n_y_too_high > 0:
         loss_score = np.inf
 
-    # %% this is where we can add in the 19 checks
-    # this will look something like y_temp = equation(add in constants from our table (look at google doc)
     # y_temp needs to between min and max basal
-    for check_dict in basal_check_dicts:
+    # only run the selected check
+    for check_dict in [basal_check_dicts[selected_check]]:
         min_val = check_dict["MIN_OUTPUT"]
         max_val = check_dict["MAX_OUTPUT"]
 
@@ -280,6 +284,7 @@ def fit_equ_with_custom_loss(
     custom_objective_function,
     linear_regression_equation,
     custom_basal_loss_with_inf,
+    selected_loss_check_index,
     verbose=False,
     workers=-1,
 ):
@@ -299,7 +304,8 @@ def fit_equ_with_custom_loss(
                 parameter_search_range_tuple=parameter_search_range_tuple,
                 equation_function=linear_regression_equation,
                 loss_function=custom_basal_loss_with_inf,
-                find_local_min_function=None,  # None,  #optimize.fmin,
+                loss_check_index=selected_loss_check_index,
+                find_al_min_function=None,  # None,  #optimize.fmin,
                 verbose=verbose,
                 workers=workers,
             )
@@ -336,6 +342,7 @@ def fit_equ_with_custom_loss(
                     parameter_search_range_tuple=parameter_search_range_tuple,
                     equation_function=linear_regression_equation,
                     loss_function=custom_basal_loss_with_inf,
+                    loss_check_index=selected_loss_check_index,
                     find_local_min_function=None,  # None,  #optimize.fmin,
                     verbose=verbose,
                     workers=workers,
@@ -380,6 +387,7 @@ def fit_equ_with_custom_loss(
         parameter_search_range_tuple=parameter_search_range_tuple,
         equation_function=linear_regression_equation,
         loss_function=custom_basal_loss_with_inf,
+        loss_check_index=selected_loss_check_index,
         find_local_min_function=None,  # None,  #optimize.fmin,
         verbose=verbose,
         workers=workers,
