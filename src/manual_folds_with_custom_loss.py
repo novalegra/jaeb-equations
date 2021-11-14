@@ -245,19 +245,19 @@ def custom_basal_loss_with_inf(
     # %% here is a list of custom penalities
     # penalize the loss if any of the estimates over prediction if y_estimate > y_actual,
     # which implies that basal > TDD given that TDD > y_actual for all cases in our dataset
-    n_overestimates = np.sum(residuals > 0)
-    if n_overestimates > 0:
-        loss_score = np.inf
+    # n_overestimates = np.sum(residuals > 0)
+    # if n_overestimates > 0:
+    #     loss_score = np.inf
 
-    # add a penalty if any of the estimates are less than 0
-    n_y_too_low = np.sum(y_estimate < 0)
-    if n_y_too_low > 0:
-        loss_score = np.inf
+    # # add a penalty if any of the estimates are less than 0
+    # n_y_too_low = np.sum(y_estimate < 0)
+    # if n_y_too_low > 0:
+    #     loss_score = np.inf
 
-    # add a penalty if any of the estimates are greater than 35 U/hr
-    n_y_too_high = np.sum(y_estimate > 35 * 24)
-    if n_y_too_high > 0:
-        loss_score = np.inf
+    # # add a penalty if any of the estimates are greater than 35 U/hr
+    # n_y_too_high = np.sum(y_estimate > 35 * 24)
+    # if n_y_too_high > 0:
+    #     loss_score = np.inf
 
     # y_temp needs to between min and max basal
     # only run the selected check
@@ -471,7 +471,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 asdf = 4
-num_combos = 6
+num_combos = 2
 
 fit_df = pd.DataFrame(columns=["check_index", "combo_index", "found_fit"])
 
