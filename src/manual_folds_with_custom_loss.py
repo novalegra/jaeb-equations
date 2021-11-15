@@ -240,19 +240,19 @@ def custom_basal_loss_with_inf(
     # %% here is a list of custom penalities
     # penalize the loss if any of the estimates over prediction if y_estimate > y_actual,
     # which implies that basal > TDD given that TDD > y_actual for all cases in our dataset
-    n_overestimates = np.sum(residuals > 0)
-    if n_overestimates > 0:
-        loss_score = np.inf
+    # n_overestimates = np.sum(residuals > 0)
+    # if n_overestimates > 0:
+    #     loss_score = np.inf
 
-    # add a penalty if any of the estimates are less than 0
-    n_y_too_low = np.sum(y_estimate < 0)
-    if n_y_too_low > 0:
-        loss_score = np.inf
+    # # add a penalty if any of the estimates are less than 0
+    # n_y_too_low = np.sum(y_estimate < 0)
+    # if n_y_too_low > 0:
+    #     loss_score = np.inf
 
-    # add a penalty if any of the estimates are greater than 35 U/hr
-    n_y_too_high = np.sum(y_estimate > 35 * 24)
-    if n_y_too_high > 0:
-        loss_score = np.inf
+    # # add a penalty if any of the estimates are greater than 35 U/hr
+    # n_y_too_high = np.sum(y_estimate > 35 * 24)
+    # if n_y_too_high > 0:
+    #     loss_score = np.inf
 
     # %% this is where we can add in the 19 checks
     # this will look something like y_temp = equation(add in constants from our table (look at google doc)
