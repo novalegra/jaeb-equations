@@ -12,6 +12,8 @@ from datetime import datetime
 LOG_CONSTANT = 1
 # Whether to generate parameter relationship graphs
 MAKE_GRAPHS = False
+# Which TDD option to run [0 = "off", 1 = "TDD", 2 = "log_TDD"]
+TDD_OPTION = 0
 
 
 def make_condition_dicts(file_name):
@@ -483,7 +485,7 @@ for y in [
     intercept = ["X_intercept"]
     bmi = ["off", "BMI", "log_BMI"]
     cho = ["off", "CHO", "log_CHO"]
-    tdd = ["off", "TDD", "log_TDD"]
+    tdd = [["off", "TDD", "log_TDD"][TDD_OPTION]]
     all_combos = list(product(y, intercept, bmi, cho, tdd))
     ac_df = pd.DataFrame(all_combos, columns=["y", "X_intercept", "BMI", "CHO", "TDD"])
     ac_df["val_loss"] = np.nan
