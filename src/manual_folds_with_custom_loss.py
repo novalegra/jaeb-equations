@@ -6,6 +6,7 @@ import utils
 import parameter_graphs
 from scipy import optimize
 from sklearn.model_selection import KFold, train_test_split
+from datetime import datetime
 
 # Small constant to ensure log is never zero
 LOG_CONSTANT = 1
@@ -33,6 +34,15 @@ def make_condition_dicts(file_name):
         output.append(condition_dict)
 
     return output
+
+
+def get_output_file_name(chunk_index, analysis_type):
+    now = datetime.now().strftime("%m-%d-%y")
+    return get_output_file_search_name(chunk_index, analysis_type) + f"-{now}.csv"
+
+
+def get_output_file_search_name(chunk_index, analysis_type):
+    return f"{analysis_type}-equation-results-MAPE-lastindex-{chunk_index}"
 
 
 basal_check_dicts = make_condition_dicts("basal_fitting_checks")
@@ -589,5 +599,7 @@ for y in [
                 )
                 ac_df.loc[combo, "val_loss"] = avg_val_loss
 
+            ac_df.to_csv(get_output_file_name(combo, y[0]))
+
 ac_df.reset_index(inplace=True)
-ac_df.to_csv("{}-equation-results-MAPE-2021-09-26.csv".format(y[0]))
+ac_df.to_csv(get_output_file_name("final", y[0]))
