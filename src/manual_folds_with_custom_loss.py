@@ -493,6 +493,12 @@ for y in [
         ac_df["beta_{}".format(x_beta)] = np.nan
 
     for combo, ac in enumerate(all_combos):
+        if utils.file_exists(
+            get_output_file_search_name(combo, y[0]), ".csv", use_startswith=True
+        ):
+            print(f"Skipping combo {combo} since we have data for it")
+            continue
+
         print(combo, list(ac))
         [y_lin_log, x_intercept, bmi_lin_log, cho_lin_log, tdd_lin_log] = ac
 
