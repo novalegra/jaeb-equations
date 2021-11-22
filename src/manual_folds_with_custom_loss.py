@@ -14,6 +14,10 @@ LOG_CONSTANT = 1
 MAKE_GRAPHS = False
 # Which TDD option to run [0 = "off", 1 = "TDD", 2 = "log_TDD"]
 TDD_OPTION = 0
+WORKERS = 1  #-1  # set to 1 for debug mode and -1 to use all workers on your machine
+VERBOSE = False
+LOCAL_SEARCH_ON_TOP_N_RESULTS = 100
+LAST_STEP_INTERVAL = 10
 
 
 def make_condition_dicts(file_name):
@@ -44,7 +48,7 @@ def get_output_file_name(chunk_index, analysis_type):
 
 
 def get_output_file_search_name(chunk_index, analysis_type):
-    return f"{analysis_type}-equation-results-MAPE-lastindex-{chunk_index}"
+    return f"{analysis_type}-{TDD_OPTION}-{LOCAL_SEARCH_ON_TOP_N_RESULTS}-equation-results-MAPE-lastindex-{chunk_index}"
 
 
 basal_check_dicts = make_condition_dicts("basal_fitting_checks")
@@ -297,7 +301,7 @@ def fit_equ_with_custom_loss(
 ):
     all_brute_results = pd.DataFrame(columns=["loss"] + list(X_df.columns))
     # first do a broad
-    for i, m in enumerate([100, 10, 1]):  # 10, 1, 0.1, 0.01, 0.001]):
+    for i, m in enumerate([100, 10, 1]):  # enumerate([100, 10, 1]):  # 10, 1, 0.1, 0.01, 0.001]):
         step = m / 10
         if i == 0:
             parameter_search_range_tuple = tuple(
@@ -327,7 +331,7 @@ def fit_equ_with_custom_loss(
             local_search_df.reset_index(drop=True, inplace=True)
 
             # add in a loop here that goes through the length of local_search_df
-            for n_local_searches in range(len(local_search_df)):
+            for n_local_searches in range(min(LOCAL_SEARCH_ON_TOP_N_RESULTS, len(local_search_df))): # range(len(local_search_df)):
                 # print("searching with {} resolution, around {}".format(m, local_search_df.loc[n_local_searches:n_local_searches, :]))
                 parameter_search_range_list = []
                 for col_name in list(X_df.columns):
@@ -372,7 +376,7 @@ def fit_equ_with_custom_loss(
 
     # do one last brute force search
     parameter_search_range_list = []
-    steps = 32
+    steps = LAST_STEP_INTERVAL
     for col_name in list(X_df.columns):
         min_val = np.round(top_wide_search_df.loc[:, col_name].min(), 5)
         max_val = np.round(top_wide_search_df.loc[:, col_name].max(), 5)
@@ -408,9 +412,7 @@ def fit_equ_with_custom_loss(
     return top_result_df, all_brute_results, True
 
 
-# start of code
-workers = -1  # set to 1 for debug mode and -1 to use all workers on your machine
-
+# %% start of code
 
 # load in data
 file_path = utils.find_full_path(
@@ -474,7 +476,6 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.3, random_state=1,
 )
 
-asdf = 4
 # loop through each of the 3 independent variables
 for y in [
     ["BASAL"]
@@ -516,8 +517,8 @@ for y in [
             custom_objective_function,
             linear_regression_equation,
             custom_basal_loss_with_inf,
-            verbose=False,
-            workers=workers,  # -1
+            verbose=VERBOSE,
+            workers=WORKERS,  # -1
         )
 
         if not success:
@@ -563,8 +564,8 @@ for y in [
                 custom_objective_function,
                 linear_regression_equation,
                 custom_basal_loss_with_inf,
-                verbose=False,
-                workers=workers,  # -1
+                verbose=VERBOSE,
+                workers=WORKERS,  # -1
             )
 
             # add in the rayhan and traditional equations here and run on custom loss function
