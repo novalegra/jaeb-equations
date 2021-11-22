@@ -48,9 +48,26 @@ def jaeb_icr_equation(tdd, carbs):
     return (a * carbs + b) * (tdd ** c)
 
 
+def jaeb_icr_equation_empty_fixed(fixed_params, X_col):
+    """ ICR equation fitted from Jaeb data """
+    a = 0.39556
+    b = 62.762
+    c = -0.71148
+
+    tdd, carbs = X_col[0], X_col[1]
+    return (a * carbs + b) * (tdd ** c)
+
+
 def traditional_icr_equation(tdd):
     """ Traditional ICR equation with constants fit to Jaeb dataset """
     a = 308.76
+    return a / tdd
+
+
+def traditional_constants_icr_equation_empty_fixed(fixed_params, X_col):
+    """ Traditional ICR equation with constants from ACE consensus """
+    a = 450
+    tdd = X_col[0]
     return a / tdd
 
 

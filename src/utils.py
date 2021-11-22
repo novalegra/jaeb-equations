@@ -235,6 +235,29 @@ def find_full_path(resource_name, extension):
     raise Exception("No file found for specified resource name & extension")
 
 
+def file_exists(file_name, extension, use_startswith=False):
+    """ Find if a file exists, given name and extension
+
+    Arguments:
+    file_name -- name of file without the extension
+    extension -- ending of file (ex: ".json")
+    use_startswith -- whether to check if the file starts with the name, rather than being an exact match
+
+    Output:
+    path to file
+    """
+    search_dir = Path(__file__).parent.parent
+    for root, dirs, files in os.walk(search_dir):
+        for name in files:
+            (base, ext) = os.path.splitext(name)
+            if use_startswith and base.startswith(file_name) and extension == ext:
+                return True
+            elif not use_startswith and base == file_name and extension == ext:
+                return True
+
+    return False
+
+
 def find_matching_file_name(key, extension, search_dir):
     """Find file path, given key and extension
         example: "/home/pi/Media/tidepool_demo.json"
