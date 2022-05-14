@@ -15,10 +15,11 @@ MAKE_GRAPHS = False
 # Which TDD option to run [0 = "off", 1 = "TDD", 2 = "log_TDD"]
 TDD_OPTION = 0
 WORKERS = 1  #-1  # set to 1 for debug mode and -1 to use all workers on your machine
-VERBOSE = False
+VERBOSE = True
 LOCAL_SEARCH_ON_TOP_N_RESULTS = 100
 LAST_STEP_INTERVAL = 10
-
+SKIP_ALREADY_RUN = False
+BASAL_TYPE_LIST = ["BASAL"]  # ["log_BASAL"]  #  ["log_BASAL"]  # ["BASAL"]   [["BASAL", "log_BASAL"]]
 
 def make_condition_dicts(file_name):
     file_path = utils.find_full_path(file_name, ".csv")
@@ -240,6 +241,10 @@ def custom_basal_loss_with_inf(
     delta=0.65,
 ):
     epsilon = np.finfo(np.float64).eps
+
+    if "log" in y_col_name:
+        y_estimate = np.exp(y_estimate)
+
     residuals = y_estimate - y_actual
 
     # median absolute percentage error
@@ -494,11 +499,12 @@ for y in [
         ac_df["beta_{}".format(x_beta)] = np.nan
 
     for combo, ac in enumerate(all_combos):
-        if utils.file_exists(
-            get_output_file_search_name(combo, y[0]), ".csv", use_startswith=True
-        ):
-            print(f"Skipping combo {combo} since we have data for it")
-            continue
+        if SKIP_ALREADY_RUN:
+            if utils.file_exists(
+                get_output_file_search_name(combo, y[0]), ".csv", use_startswith=True
+            ):
+                print(f"Skipping combo {combo} since we have data for it")
+                continue
 
         print(combo, list(ac))
         [y_lin_log, x_intercept, bmi_lin_log, cho_lin_log, tdd_lin_log] = ac
