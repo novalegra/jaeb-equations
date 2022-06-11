@@ -1,4 +1,5 @@
 from itertools import product
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -12,14 +13,15 @@ from datetime import datetime
 LOG_CONSTANT = 1
 # Whether to generate parameter relationship graphs
 MAKE_GRAPHS = False
-# Which TDD option to run [0 = "off", 1 = "TDD", 2 = "log_TDD"]
-TDD_OPTION = 0
-WORKERS = 1  #-1  # set to 1 for debug mode and -1 to use all workers on your machine
-VERBOSE = True
+# Which TDD option to run [0 = "off", 1 = "TDD", 2 = "log_TDD", 3 = "1/TDD"]
+TDD_OPTION = 3
+WORKERS = -1  #-1  # set to 1 for debug mode and -1 to use all workers on your machine
+VERBOSE = False
 LOCAL_SEARCH_ON_TOP_N_RESULTS = 100
 LAST_STEP_INTERVAL = 10
 SKIP_ALREADY_RUN = False
-BASAL_TYPE_LIST = ["BASAL"]  # ["log_BASAL"]  #  ["log_BASAL"]  # ["BASAL"]   [["BASAL", "log_BASAL"]]
+Y_VARIABLE_LIST = ["CIR"]  #["BASAL", "log_BASAL"]  ['BASAL', 'log_BASAL', 'ISF', 'log_ISF', 'CIR', 'log_CIR']
+
 
 def make_condition_dicts(file_name):
     file_path = utils.find_full_path(file_name, ".csv")
@@ -34,6 +36,7 @@ def make_condition_dicts(file_name):
             "log_CHO": np.log(all_conditions["CHO"][index] + LOG_CONSTANT),
             "TDD": all_conditions["TDD"][index],
             "log_TDD": np.log(all_conditions["TDD"][index] + LOG_CONSTANT),
+            "1/TDD": 1/ (all_conditions["TDD"][index] + LOG_CONSTANT),
             "MIN_OUTPUT": all_conditions["MIN_OUTPUT"][index],
             "MAX_OUTPUT": all_conditions["MAX_OUTPUT"][index],
             "X_intercept": 1,
@@ -50,9 +53,6 @@ def get_output_file_name(chunk_index, analysis_type):
 
 def get_output_file_search_name(chunk_index, analysis_type):
     return f"{analysis_type}-{TDD_OPTION}-{LOCAL_SEARCH_ON_TOP_N_RESULTS}-equation-results-MAPE-lastindex-{chunk_index}"
-
-
-basal_check_dicts = make_condition_dicts("basal_fitting_checks")
 
 
 def brute_optimize(
@@ -238,12 +238,13 @@ def custom_basal_loss_with_inf(
     fixed_parameters,
     X_col_names,
     y_col_name,
-    delta=0.65,
+    transform_loss=False,
 ):
     epsilon = np.finfo(np.float64).eps
 
-    if "log" in y_col_name:
+    if (("log" in y_col_name) & (transform_loss)):
         y_estimate = np.exp(y_estimate)
+        y_actual = np.exp(y_actual)
 
     residuals = y_estimate - y_actual
 
@@ -278,7 +279,8 @@ def custom_basal_loss_with_inf(
     # %% this is where we can add in the 19 checks
     # this will look something like y_temp = equation(add in constants from our table (look at google doc)
     # y_temp needs to between min and max basal
-    for check_dict in basal_check_dicts:
+
+    for check_dict in bounding_check_dictionary:
         min_val = check_dict["MIN_OUTPUT"]
         max_val = check_dict["MAX_OUTPUT"]
 
@@ -286,7 +288,9 @@ def custom_basal_loss_with_inf(
         y_pred = equation(fixed_parameters, X_val)
 
         if "log" in y_col_name:
+            warnings.filterwarnings('ignore')
             y_pred = np.exp(y_pred)
+            warnings.filterwarnings('always')
 
         if not (min_val <= y_pred <= max_val):
             loss_score = np.inf
@@ -305,10 +309,10 @@ def fit_equ_with_custom_loss(
     workers=-1,
 ):
     all_brute_results = pd.DataFrame(columns=["loss"] + list(X_df.columns))
-    # first do a broad
-    for i, m in enumerate([100, 10, 1]):  # enumerate([100, 10, 1]):  # 10, 1, 0.1, 0.01, 0.001]):
+    # first do a broad search
+    for i, m in enumerate([10000, 1000, 100, 10, 1]):  # enumerate([100, 10, 1]):  # 10, 1, 0.1, 0.01, 0.001]):
         step = m / 10
-        if i == 0:
+        if i <= 2:
             parameter_search_range_tuple = tuple(
                 [slice(np.round(-m, 5), np.round(m + step, 5), np.round(step, 5))]
                 * len(X_df.columns)
@@ -460,6 +464,7 @@ clean_data["log_CIR"] = np.log(clean_data["CIR"] + LOG_CONSTANT)
 clean_data["log_BMI"] = np.log(clean_data["BMI"] + LOG_CONSTANT)
 clean_data["log_CHO"] = np.log(clean_data["CHO"] + LOG_CONSTANT)
 clean_data["log_TDD"] = np.log(clean_data["TDD"] + LOG_CONSTANT)
+clean_data["1/TDD"] = 1/clean_data["TDD"]
 
 y_cols = ["BASAL", "log_BASAL", "ISF", "log_ISF", "CIR", "log_CIR"]
 
@@ -471,6 +476,7 @@ x_cols = [
     "log_CHO",
     "TDD",
     "log_TDD",
+    "1/TDD"
 ]
 
 X = clean_data[x_cols]
@@ -482,17 +488,23 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # loop through each of the 3 independent variables
-for y in [
-    ["BASAL"]
-]:  # [["BASAL", "log_BASAL"]]:  #, ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
-    print("solving for the {} equations".format(y[0]))
+for y_name in Y_VARIABLE_LIST:  # [["BASAL", "log_BASAL"]]:  #, ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
+    print(f"solving for the {y_name} equations")
+
+    # load in the right bounding parameters or fitting checks
+    if "BASAL" in y_name:
+        bounding_check_dictionary = make_condition_dicts("basal_fitting_checks")
+    elif "ISF" in y_name:
+        bounding_check_dictionary = make_condition_dicts("isf_fitting_checks")
+    elif "CIR" in y_name:
+        bounding_check_dictionary = make_condition_dicts("cir_fitting_checks")
 
     # consider all combinations
-    intercept = ["X_intercept"]
+    intercept = ["off", "X_intercept"]
     bmi = ["off", "BMI", "log_BMI"]
     cho = ["off", "CHO", "log_CHO"]
-    tdd = [["off", "TDD", "log_TDD"][TDD_OPTION]]
-    all_combos = list(product(y, intercept, bmi, cho, tdd))
+    tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]
+    all_combos = list(product([y_name], intercept, bmi, cho, tdd))
     ac_df = pd.DataFrame(all_combos, columns=["y", "X_intercept", "BMI", "CHO", "TDD"])
     ac_df["val_loss"] = np.nan
     for x_beta in x_cols:
@@ -501,7 +513,7 @@ for y in [
     for combo, ac in enumerate(all_combos):
         if SKIP_ALREADY_RUN:
             if utils.file_exists(
-                get_output_file_search_name(combo, y[0]), ".csv", use_startswith=True
+                get_output_file_search_name(combo, y_name), ".csv", use_startswith=True
             ):
                 print(f"Skipping combo {combo} since we have data for it")
                 continue
@@ -513,6 +525,10 @@ for y in [
         X_cols = list(set(X_cols))
         if "off" in X_cols:
             X_cols.remove("off")
+
+        if len(X_cols) == 0:
+            print(f"Skipping combo {combo} because all parameters are off")
+            continue
 
         # fit with custom loss function
         X_df = pd.DataFrame(X_train[X_cols])
@@ -582,8 +598,6 @@ for y in [
             fixed_parameters = top_result.loc[0, X_cols].values
             vals = X_df_val.values
             y_predict = linear_regression_equation(fixed_parameters, X_df_val.values)
-            if "log" in y_lin_log:
-                y_predict = np.exp(y_predict)
 
             fold_X_col_names = list(X_df_val.columns)
             val_loss = custom_basal_loss_with_inf(
@@ -593,6 +607,7 @@ for y in [
                 fixed_parameters,
                 fold_X_col_names,
                 y_lin_log,
+                transform_loss=True
             )
             ac_df.loc[combo, "fold_{}_val_loss".format(fold)] = val_loss
             for result_col in top_result.columns:
@@ -614,7 +629,7 @@ for y in [
                 )
                 ac_df.loc[combo, "val_loss"] = avg_val_loss
 
-            ac_df.to_csv(get_output_file_name(combo, y[0]))
+            ac_df.to_csv(get_output_file_name(combo, y_name))
 
 ac_df.reset_index(inplace=True)
-ac_df.to_csv(get_output_file_name("final", y[0]))
+ac_df.to_csv(get_output_file_name("final", y_name))
