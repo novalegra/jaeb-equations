@@ -13,6 +13,7 @@ from datetime import datetime
 LOG_CONSTANT = 1
 # Whether to generate parameter relationship graphs
 MAKE_GRAPHS = False
+
 # Which TDD option to run [0 = "off", 1 = "TDD", 2 = "log_TDD", 3 = "1/TDD"]
 TDD_OPTION = 3
 WORKERS = -1  #-1  # set to 1 for debug mode and -1 to use all workers on your machine
@@ -54,6 +55,9 @@ def get_output_file_name(chunk_index, analysis_type):
 def get_output_file_search_name(chunk_index, analysis_type):
     return f"{analysis_type}-{TDD_OPTION}-{LOCAL_SEARCH_ON_TOP_N_RESULTS}-equation-results-MAPE-lastindex-{chunk_index}"
 
+
+
+basal_check_dicts = make_condition_dicts("basal_fitting_checks")
 
 def brute_optimize(
     X_df,
@@ -245,7 +249,7 @@ def custom_basal_loss_with_inf(
     if (("log" in y_col_name) & (transform_loss)):
         y_estimate = np.exp(y_estimate)
         y_actual = np.exp(y_actual)
-
+        
     residuals = y_estimate - y_actual
 
     # median absolute percentage error
@@ -628,7 +632,7 @@ for y_name in Y_VARIABLE_LIST:  # [["BASAL", "log_BASAL"]]:  #, ["ISF", "log_ISF
                     val_fold_loss_array[val_fold_loss_array < np.inf]
                 )
                 ac_df.loc[combo, "val_loss"] = avg_val_loss
-
+                
             ac_df.to_csv(get_output_file_name(combo, y_name))
 
 ac_df.reset_index(inplace=True)
