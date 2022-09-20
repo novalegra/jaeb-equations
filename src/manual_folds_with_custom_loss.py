@@ -9,20 +9,28 @@ from scipy import optimize
 from sklearn.model_selection import KFold, train_test_split
 from datetime import datetime
 
-# Small constant to ensure log is never zero
-LOG_CONSTANT = 1
-# Whether to generate parameter relationship graphs
-MAKE_GRAPHS = False
+# %% SETTINGS FOR THE USER TO SET
+# NOTE: WITH THE WAY THE CODE IS CURRENTLY STRUCTURED IT IS RECOMMENDED THAT YOU RUN EACH Y-VARIABLE
+#   & EACH TDD OPTION SEPARATELY. THIS WAS DONE TO ALLOW THE CODE TO BE RUN IN PARALLEL, ALBEIT MANUALLY.
+#   IF YOU WANT TO RUN ALL Y_VARIABLES AT ONCE, JUST REPLACE CURRENT LIST WITH THE COMMENTED LIST IN THE LINE BELOW.
+Y_VARIABLE_LIST = ["BASAL"]  # ['BASAL', 'log_BASAL', 'ISF', 'log_ISF', 'CIR', 'log_CIR']
+# NOTE: IF YOU WANT TO RUN ALL TDD OPTION, COMMENT OUT THE TDD_OPTION HERE
+    # AND FIND THIS LINE BELOW "tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]"
+    # AND REPLACE IT WITH "tdd = ["off", "TDD", "log_TDD", "1/TDD"]"
+    # tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]  # tdd = ["off", "TDD", "log_TDD", "1/TDD"]
+# SELECT A TDD OPTION [0 = "off", 1 = "TDD", 2 = "log_TDD", 3 = "1/TDD"]
+TDD_OPTION = 0
 
-# Which TDD option to run [0 = "off", 1 = "TDD", 2 = "log_TDD", 3 = "1/TDD"]
-TDD_OPTION = 3
+MAKE_GRAPHS = False
 WORKERS = -1  #-1  # set to 1 for debug mode and -1 to use all workers on your machine
 VERBOSE = False
 LOCAL_SEARCH_ON_TOP_N_RESULTS = 100
 LAST_STEP_INTERVAL = 10
 SKIP_ALREADY_RUN = False
-Y_VARIABLE_LIST = ["CIR"]  #["BASAL", "log_BASAL"]  ['BASAL', 'log_BASAL', 'ISF', 'log_ISF', 'CIR', 'log_CIR']
 
+# %% CONSTANTS
+# Small constant to ensure log is never zero
+LOG_CONSTANT = 1
 
 def make_condition_dicts(file_name):
     file_path = utils.find_full_path(file_name, ".csv")
@@ -507,7 +515,8 @@ for y_name in Y_VARIABLE_LIST:  # [["BASAL", "log_BASAL"]]:  #, ["ISF", "log_ISF
     intercept = ["off", "X_intercept"]
     bmi = ["off", "BMI", "log_BMI"]
     cho = ["off", "CHO", "log_CHO"]
-    tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]
+    # NOTE: IF YOU WANT TO RUN ALL TDD OPTIONS, REPLACE THE CURRENT LINE WITH THE COMMENTED LINE, IN THE LINE BELOW
+    tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]  # tdd = ["off", "TDD", "log_TDD", "1/TDD"]
     all_combos = list(product([y_name], intercept, bmi, cho, tdd))
     ac_df = pd.DataFrame(all_combos, columns=["y", "X_intercept", "BMI", "CHO", "TDD"])
     ac_df["val_loss"] = np.nan
