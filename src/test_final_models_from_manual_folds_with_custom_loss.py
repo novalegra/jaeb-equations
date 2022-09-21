@@ -123,6 +123,7 @@ non_zero_coefficients_mask = np.sum(df[beta_columns] == 0, axis=1) == 0
 final_equation_mask = converged_model_mask & non_zero_coefficients_mask
 final_equations_df = df.loc[final_equation_mask, keep_columns].copy().reset_index(drop=True)
 
+# ADD IN THE AACE EQUATIONS
 if "BASAL" in file_name:
     final_equations_df.loc[
         final_equations_df.index.max() + 1, ["y", "X_intercept", "BMI", "CHO", "TDD", "beta_TDD"]
@@ -265,38 +266,38 @@ for i in final_equations_df.index:
         print("skipping this plot")
 
 
-# add in Rayhan Special for CIR
-# cir_rayhan = (0.39556 * CHO + 62.762) * TDD^(-0.71148)
-i = i + 1
-
-final_equations_df.loc[i, ["y", "X_intercept", "BMI", "CHO", "TDD", "beta_1/TDD"]] = [
-    "log_CIR_Rayhan",
-    "off",
-    "off",
-    "off",
-    "off",
-    "off",
-]
-
-if "CIR" in file_name:
-    # TODO: calculate the validation loss too
-    equation_string = "CIR = (0.39556 * CHO + 62.762) * TDD^-0.71148"
-    y_predict_cir_rayhan = pd.DataFrame(np.multiply(0.39556 * X_test["CHO"].values + 62.762, X_test["TDD"].values ** (-0.71148))).values
-    y_actual = pd.DataFrame(y_test["CIR"]).values
-
-    residuals = y_predict_cir_rayhan - y_actual
-
-    # median absolute percentage error
-    absolute_percent_error = np.abs(residuals) / np.maximum(np.abs(y_actual), EPSILON)
-    test_mdape = np.median(absolute_percent_error)
-    test_mape = np.mean(absolute_percent_error)
-    test_rmse = np.sqrt(np.mean((residuals)**2))
-    r2 = r2_score(y_actual, y_predict)
-
-    final_equations_df.loc[i, "test_mdape"] = test_mdape
-    final_equations_df.loc[i, "test_mape"] = test_mape
-    final_equations_df.loc[i, "test_rmse"] = test_rmse
-    final_equations_df.loc[i, "equation"] = equation_string
+# # add in Rayhan Special for CIR
+# # cir_rayhan = (0.39556 * CHO + 62.762) * TDD^(-0.71148)
+# i = i + 1
+#
+# final_equations_df.loc[i, ["y", "X_intercept", "BMI", "CHO", "TDD", "beta_1/TDD"]] = [
+#     "log_CIR_Rayhan",
+#     "off",
+#     "off",
+#     "off",
+#     "off",
+#     "off",
+# ]
+#
+# if "CIR" in file_name:
+#     # TODO: calculate the validation loss too
+#     equation_string = "CIR = (0.39556 * CHO + 62.762) * TDD^-0.71148"
+#     y_predict_cir_rayhan = pd.DataFrame(np.multiply(0.39556 * X_test["CHO"].values + 62.762, X_test["TDD"].values ** (-0.71148))).values
+#     y_actual = pd.DataFrame(y_test["CIR"]).values
+#
+#     residuals = y_predict_cir_rayhan - y_actual
+#
+#     # median absolute percentage error
+#     absolute_percent_error = np.abs(residuals) / np.maximum(np.abs(y_actual), EPSILON)
+#     test_mdape = np.median(absolute_percent_error)
+#     test_mape = np.mean(absolute_percent_error)
+#     test_rmse = np.sqrt(np.mean((residuals)**2))
+#     r2 = r2_score(y_actual, y_predict)
+#
+#     final_equations_df.loc[i, "test_mdape"] = test_mdape
+#     final_equations_df.loc[i, "test_mape"] = test_mape
+#     final_equations_df.loc[i, "test_rmse"] = test_rmse
+#     final_equations_df.loc[i, "equation"] = equation_string
 
 final_equations_df.sort_values("test_mdape", inplace=True)
 now = datetime.now().strftime("%m-%d-%y")
