@@ -10,11 +10,11 @@ The purpose of this project is to create equations based on Jaeb study data that
 This phase of the project will be done when equations have been created for basal rate, carb ratio, and insulin sensitivity factor.
 
 ## Project Description
-This project first uses Jaeb study data to create an 'aspirational' cohort of subjects that have normal BMI, meet the international consensus on time in range (≥90% CGM), and have bolus and carbohydrate data available. This is done in `process_data_for_fitting.py`.
+This project first uses Jaeb study data to create an 'aspirational' cohort of subjects that have normal BMI, meet the international consensus on time in range (≥90% CGM), and have bolus and carbohydrate data available. This is done in `create_dataset.py`, `annotate_with_days_carbs.py` and `process_data_for_fitting.py`.
 
- The project then uses 70% of the aspirational data to fit the different equation form combinations of BMI, daily CHO, and TDD for basal rate, ISF, and ICR. A 5-fold cross-validation is used to compute value loss. This is done in `manual_folds_with_custom_loss.py`.
+ The project then uses 70% of the aspirational data to fit the different equation form combinations of BMI, daily CHO, and TDD for basal rate, ISF, and ICR. A 5-fold cross-validation is used to compute value loss. This is done in `create_equations.py`.
 
- Finally, the project uses the remaining reserved 30% of the aspirational data to evaluate the final equations. This is done in `test_final_models_from_manual_folds_with_custom_loss.py`. 
+ Finally, the project uses the remaining reserved 30% of the aspirational data to evaluate the final equations. This is done in `test_final_equations_with_reserved_data.py`. 
 
 ### Technologies
 * Python
