@@ -51,5 +51,5 @@ This may also make it easier to convert existing packages into pypi packages. We
 in conda using the conda-environment.yml file when packages are not available via pip (e.g., R and plotly-orca).
 
 ## Getting Started with this project
-1. The data was obtained from the [Jaeb observational study](https://docs.google.com/document/d/1rBB__nNhbIt1-HO2mjKT34Ad8KRDWZCY9yvrHSVUxDs/edit#:~:text=https%3A//www.liebertpub.com/doi/10.1089/dia.2020.0535)
+1. The data was obtained from the [Jaeb observational study](https://www.liebertpub.com/doi/10.1089/dia.2020.0535)
 2. Data processing/transformation scripts are being kept in the `src` folder of this repo.
