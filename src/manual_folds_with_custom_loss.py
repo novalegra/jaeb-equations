@@ -21,7 +21,6 @@ Y_VARIABLE_LIST = ["BASAL"]  # ['BASAL', 'log_BASAL', 'ISF', 'log_ISF', 'CIR', '
 # SELECT A TDD OPTION [0 = "off", 1 = "TDD", 2 = "log_TDD", 3 = "1/TDD"]
 TDD_OPTION = 0
 
-MAKE_GRAPHS = False
 WORKERS = -1  # set to 1 for debug mode and -1 to use all workers on your machine
 VERBOSE = False
 LOCAL_SEARCH_ON_TOP_N_RESULTS = 100
@@ -487,10 +486,6 @@ for y_name in Y_VARIABLE_LIST:
         if not success:
             print(f"ERROR: unable to find fit for {list(ac)} parameters")
             continue
-
-        if MAKE_GRAPHS:
-            fixed_parameters = top_result.loc[0, X_cols].values
-            parameter_graphs.make_graphs(linear_regression_equation, fixed_parameters, X_cols, y_lin_log)
 
         for result_col in top_result.columns:
             if result_col == "train_loss":
