@@ -1,23 +1,34 @@
+import warnings
+from datetime import datetime
 from itertools import product
 
 import numpy as np
 import pandas as pd
 import utils
-import parameter_graphs
 from scipy import optimize
 from sklearn.model_selection import KFold, train_test_split
-from datetime import datetime
 
-# Small constant to ensure log is never zero
-LOG_CONSTANT = 1
-# Whether to generate parameter relationship graphs
-MAKE_GRAPHS = False
-# Which TDD option to run [0 = "off", 1 = "TDD", 2 = "log_TDD"]
+# %% SETTINGS FOR THE USER TO SET
+# NOTE: WITH THE WAY THE CODE IS CURRENTLY STRUCTURED IT IS RECOMMENDED THAT YOU RUN EACH Y-VARIABLE
+#   & EACH TDD OPTION SEPARATELY, SINCE EACH RUN TAKES SOME TIME. THIS WAS DONE TO ALLOW THE CODE TO BE RUN IN PARALLEL, 
+#   ALBEIT MANUALLY. IF YOU WANT TO RUN ALL Y_VARIABLES AT ONCE, JUST REPLACE CURRENT LIST WITH THE COMMENTED LIST IN THE LINE BELOW.
+Y_VARIABLE_LIST = ["BASAL"]  # ['BASAL', 'log_BASAL', 'ISF', 'log_ISF', 'CIR', 'log_CIR']
+# NOTE: IF YOU WANT TO RUN ALL TDD OPTION, COMMENT OUT THE TDD_OPTION HERE
+# AND FIND THIS LINE BELOW "tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]"
+# AND REPLACE IT WITH "tdd = ["off", "TDD", "log_TDD", "1/TDD"]"
+# tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]  # tdd = ["off", "TDD", "log_TDD", "1/TDD"]
+# SELECT A TDD OPTION [0 = "off", 1 = "TDD", 2 = "log_TDD", 3 = "1/TDD"]
 TDD_OPTION = 0
-WORKERS = 1  #-1  # set to 1 for debug mode and -1 to use all workers on your machine
+
+WORKERS = -1  # set to 1 for debug mode and -1 to use all workers on your machine
 VERBOSE = False
 LOCAL_SEARCH_ON_TOP_N_RESULTS = 100
 LAST_STEP_INTERVAL = 10
+SKIP_ALREADY_RUN = False
+
+# %% CONSTANTS
+# Small constant to ensure log is never zero
+LOG_CONSTANT = 1
 
 
 def make_condition_dicts(file_name):
@@ -33,6 +44,7 @@ def make_condition_dicts(file_name):
             "log_CHO": np.log(all_conditions["CHO"][index] + LOG_CONSTANT),
             "TDD": all_conditions["TDD"][index],
             "log_TDD": np.log(all_conditions["TDD"][index] + LOG_CONSTANT),
+            "1/TDD": 1 / (all_conditions["TDD"][index] + LOG_CONSTANT),
             "MIN_OUTPUT": all_conditions["MIN_OUTPUT"][index],
             "MAX_OUTPUT": all_conditions["MAX_OUTPUT"][index],
             "X_intercept": 1,
@@ -108,8 +120,6 @@ def brute_optimize(
     X_col_names = list(X_df.columns)
     X_ndarray = X_df.values
 
-    # print("fitting {} = {}".format(y_col_name, X_col_names))
-
     optimize_args_tuple = (
         equation_function,
         loss_function,
@@ -131,9 +141,7 @@ def brute_optimize(
     )
 
     optimal_parameter_values = brute_results[0]
-    optimal_parameter_df = pd.DataFrame(
-        optimal_parameter_values.reshape([1, -1]), columns=X_col_names
-    )
+    optimal_parameter_df = pd.DataFrame(optimal_parameter_values.reshape([1, -1]), columns=X_col_names)
 
     loss_of_optimal_params = brute_results[1]
     optimal_parameter_df["loss"] = loss_of_optimal_params
@@ -144,33 +152,22 @@ def brute_optimize(
 
     search_mesh = brute_results[2]
     search_mesh_loss_scores = brute_results[3]
-    search_results_df = pd.DataFrame(
-        search_mesh_loss_scores.reshape([-1, 1]), columns=["loss"]
-    )
+    search_results_df = pd.DataFrame(search_mesh_loss_scores.reshape([-1, 1]), columns=["loss"])
 
-    # TODO: make sure this won't break if number of parameters is 1
     fit_equation_string = "{} = ".format(y_col_name)
     for col_idx, X_col_name in enumerate(X_col_names):
         if len(X_col_names) == 1:
             search_results_df[X_col_name] = search_mesh
             if col_idx == len(X_col_names) - 1:
-                fit_equation_string += "{} {}".format(
-                    round(optimal_parameter_values, 5), X_col_name
-                )
+                fit_equation_string += "{} {}".format(round(optimal_parameter_values, 5), X_col_name)
             else:
-                fit_equation_string += "{} {} + ".format(
-                    round(optimal_parameter_values, 5), X_col_name
-                )
+                fit_equation_string += "{} {} + ".format(round(optimal_parameter_values, 5), X_col_name)
         else:
             search_results_df[X_col_name] = search_mesh[col_idx].reshape([-1, 1])
             if col_idx == len(X_col_names) - 1:
-                fit_equation_string += "{} {}".format(
-                    round(optimal_parameter_values[col_idx], 5), X_col_name
-                )
+                fit_equation_string += "{} {}".format(round(optimal_parameter_values[col_idx], 5), X_col_name)
             else:
-                fit_equation_string += "{} {} + ".format(
-                    round(optimal_parameter_values[col_idx], 5), X_col_name
-                )
+                fit_equation_string += "{} {} + ".format(round(optimal_parameter_values[col_idx], 5), X_col_name)
     if verbose:
         print(fit_equation_string)
 
@@ -203,9 +200,7 @@ def custom_objective_function(parameters_to_estimate_1darray, *args_tuple):
         X_col_names,
         y_col_name,
     ) = args_tuple
-    y_estimate = equation_function(
-        parameters_to_estimate_1darray, fixed_parameters_ndarray
-    )
+    y_estimate = equation_function(parameters_to_estimate_1darray, fixed_parameters_ndarray)
     loss_score = loss_function(
         y_actual,
         y_estimate,
@@ -219,9 +214,7 @@ def custom_objective_function(parameters_to_estimate_1darray, *args_tuple):
     return loss_score
 
 
-def linear_regression_equation(
-    parameters_to_estimate_1darray, fixed_parameters_ndarray
-):
+def linear_regression_equation(parameters_to_estimate_1darray, fixed_parameters_ndarray):
     parameters_to_estimate_1darray = np.reshape(parameters_to_estimate_1darray, (-1, 1))
     return np.matmul(fixed_parameters_ndarray, parameters_to_estimate_1darray)
 
@@ -237,43 +230,21 @@ def custom_basal_loss_with_inf(
     fixed_parameters,
     X_col_names,
     y_col_name,
-    delta=0.65,
+    transform_loss=False,
 ):
     epsilon = np.finfo(np.float64).eps
+
+    if ("log" in y_col_name) & (transform_loss):
+        y_estimate = np.exp(y_estimate)
+        y_actual = np.exp(y_actual)
+
     residuals = y_estimate - y_actual
 
     # median absolute percentage error
     absolute_percent_error = np.abs(residuals) / np.maximum(np.abs(y_actual), epsilon)
     loss_score = np.median(absolute_percent_error)
 
-    # %% old code with huber loss
-    # outlier_mask = absolute_percent_error > delta
-    # loss = np.ones(np.shape(absolute_percent_error)) * np.nan
-    # loss[~outlier_mask] = 0.5 * absolute_percent_error[~outlier_mask] ** 2
-    # loss[outlier_mask] = delta * (abs(absolute_percent_error[outlier_mask]) - (0.5 * delta))
-    # loss_score = np.sum(loss)
-
-    # %% here is a list of custom penalities
-    # penalize the loss if any of the estimates over prediction if y_estimate > y_actual,
-    # which implies that basal > TDD given that TDD > y_actual for all cases in our dataset
-    # n_overestimates = np.sum(residuals > 0)
-    # if n_overestimates > 0:
-    #     loss_score = np.inf
-
-    # # add a penalty if any of the estimates are less than 0
-    # n_y_too_low = np.sum(y_estimate < 0)
-    # if n_y_too_low > 0:
-    #     loss_score = np.inf
-
-    # # add a penalty if any of the estimates are greater than 35 U/hr
-    # n_y_too_high = np.sum(y_estimate > 35 * 24)
-    # if n_y_too_high > 0:
-    #     loss_score = np.inf
-
-    # %% this is where we can add in the 19 checks
-    # this will look something like y_temp = equation(add in constants from our table (look at google doc)
-    # y_temp needs to between min and max basal
-    for check_dict in basal_check_dicts:
+    for check_dict in bounding_check_dictionary:
         min_val = check_dict["MIN_OUTPUT"]
         max_val = check_dict["MAX_OUTPUT"]
 
@@ -281,7 +252,9 @@ def custom_basal_loss_with_inf(
         y_pred = equation(fixed_parameters, X_val)
 
         if "log" in y_col_name:
+            warnings.filterwarnings("ignore")
             y_pred = np.exp(y_pred)
+            warnings.filterwarnings("always")
 
         if not (min_val <= y_pred <= max_val):
             loss_score = np.inf
@@ -300,13 +273,12 @@ def fit_equ_with_custom_loss(
     workers=-1,
 ):
     all_brute_results = pd.DataFrame(columns=["loss"] + list(X_df.columns))
-    # first do a broad
-    for i, m in enumerate([100, 10, 1]):  # enumerate([100, 10, 1]):  # 10, 1, 0.1, 0.01, 0.001]):
+    # first do a broad search
+    for i, m in enumerate([10000, 1000, 100, 10, 1]):
         step = m / 10
-        if i == 0:
+        if i <= 2:
             parameter_search_range_tuple = tuple(
-                [slice(np.round(-m, 5), np.round(m + step, 5), np.round(step, 5))]
-                * len(X_df.columns)
+                [slice(np.round(-m, 5), np.round(m + step, 5), np.round(step, 5))] * len(X_df.columns)
             )
             results_df, results_meta_info_dict = brute_optimize(
                 X_df=X_df,
@@ -315,24 +287,19 @@ def fit_equ_with_custom_loss(
                 parameter_search_range_tuple=parameter_search_range_tuple,
                 equation_function=linear_regression_equation,
                 loss_function=custom_basal_loss_with_inf,
-                find_local_min_function=None,  # None,  #optimize.fmin,
+                find_local_min_function=None,
                 verbose=verbose,
                 workers=workers,
             )
-            all_brute_results = pd.concat(
-                [all_brute_results, results_meta_info_dict["search_results_df"]]
-            )
+            all_brute_results = pd.concat([all_brute_results, results_meta_info_dict["search_results_df"]])
         else:
-            local_search_df = all_brute_results.loc[
-                all_brute_results["loss"] != np.inf, :
-            ].copy()
+            local_search_df = all_brute_results.loc[all_brute_results["loss"] != np.inf, :].copy()
             local_search_df.drop_duplicates(inplace=True, ignore_index=True)
             local_search_df.sort_values(by="loss", inplace=True)
             local_search_df.reset_index(drop=True, inplace=True)
 
             # add in a loop here that goes through the length of local_search_df
-            for n_local_searches in range(min(LOCAL_SEARCH_ON_TOP_N_RESULTS, len(local_search_df))): # range(len(local_search_df)):
-                # print("searching with {} resolution, around {}".format(m, local_search_df.loc[n_local_searches:n_local_searches, :]))
+            for n_local_searches in range(min(LOCAL_SEARCH_ON_TOP_N_RESULTS, len(local_search_df))):
                 parameter_search_range_list = []
                 for col_name in list(X_df.columns):
                     local_val = local_search_df.loc[n_local_searches, col_name]
@@ -352,23 +319,18 @@ def fit_equ_with_custom_loss(
                     parameter_search_range_tuple=parameter_search_range_tuple,
                     equation_function=linear_regression_equation,
                     loss_function=custom_basal_loss_with_inf,
-                    find_local_min_function=None,  # None,  #optimize.fmin,
+                    find_local_min_function=None,
                     verbose=verbose,
                     workers=workers,
                 )
-                # print("lowest around this point is {}".format(results_df))
-                all_brute_results = pd.concat(
-                    [all_brute_results, results_meta_info_dict["search_results_df"]]
-                )
+
+                all_brute_results = pd.concat([all_brute_results, results_meta_info_dict["search_results_df"]])
 
     # now do a moderate search around the parameter space
-    top_wide_search_df = all_brute_results.loc[
-        all_brute_results["loss"] != np.inf, :
-    ].copy()
+    top_wide_search_df = all_brute_results.loc[all_brute_results["loss"] != np.inf, :].copy()
     top_wide_search_df.drop_duplicates(inplace=True)
     top_wide_search_df.sort_values(by="loss", inplace=True)
     top_wide_search_df.reset_index(drop=True, inplace=True)
-    # print("that took {} seconds".format(time.time() - start_time))
 
     # If we couldn't find a non-inf loss, we failed to find a fit
     if len(top_wide_search_df) < 1:
@@ -385,9 +347,7 @@ def fit_equ_with_custom_loss(
             min_val = min_val - 0.001
             max_val = max_val + 0.001
             step_val = np.round((max_val - min_val) / steps, 5)
-        parameter_search_range_list.append(
-            slice(min_val, np.round(max_val + step_val, 5), step_val)
-        )
+        parameter_search_range_list.append(slice(min_val, np.round(max_val + step_val, 5), step_val))
     parameter_search_range_tuple = tuple(parameter_search_range_list)
     results_df, results_meta_info_dict = brute_optimize(
         X_df=X_df,
@@ -396,28 +356,23 @@ def fit_equ_with_custom_loss(
         parameter_search_range_tuple=parameter_search_range_tuple,
         equation_function=linear_regression_equation,
         loss_function=custom_basal_loss_with_inf,
-        find_local_min_function=None,  # None,  #optimize.fmin,
+        find_local_min_function=None,
         verbose=verbose,
         workers=workers,
     )
-    all_brute_results = pd.concat(
-        [all_brute_results, results_meta_info_dict["search_results_df"]]
-    )
+    all_brute_results = pd.concat([all_brute_results, results_meta_info_dict["search_results_df"]])
 
     all_brute_results.sort_values(by="loss", inplace=True)
     all_brute_results.reset_index(drop=True, inplace=True)
-    # valid_results_df = all_brute_results.loc[all_brute_results["loss"] != np.inf, :].copy()
     top_result_df = all_brute_results.loc[0:0, :]
 
     return top_result_df, all_brute_results, True
 
 
-# %% start of code
+# %% START OF CODE
 
 # load in data
-file_path = utils.find_full_path(
-    "2021-05-02_equation_paper_aspirational_data_reduced", ".csv"
-)
+file_path = utils.find_full_path("2021-05-02_equation_paper_aspirational_data_reduced", ".csv")
 all_data = pd.read_csv(
     file_path,
     usecols=[
@@ -455,50 +410,52 @@ clean_data["log_CIR"] = np.log(clean_data["CIR"] + LOG_CONSTANT)
 clean_data["log_BMI"] = np.log(clean_data["BMI"] + LOG_CONSTANT)
 clean_data["log_CHO"] = np.log(clean_data["CHO"] + LOG_CONSTANT)
 clean_data["log_TDD"] = np.log(clean_data["TDD"] + LOG_CONSTANT)
+clean_data["1/TDD"] = 1 / clean_data["TDD"]
 
 y_cols = ["BASAL", "log_BASAL", "ISF", "log_ISF", "CIR", "log_CIR"]
 
-x_cols = [
-    "X_intercept",
-    "BMI",
-    "log_BMI",
-    "CHO",
-    "log_CHO",
-    "TDD",
-    "log_TDD",
-]
+x_cols = ["X_intercept", "BMI", "log_BMI", "CHO", "log_CHO", "TDD", "log_TDD", "1/TDD"]
 
 X = clean_data[x_cols]
 y = clean_data[y_cols]
 
 # break the data into 70% train and 30% test set
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.3, random_state=1,
+    X,
+    y,
+    test_size=0.3,
+    random_state=1,
 )
 
 # loop through each of the 3 independent variables
-for y in [
-    ["BASAL"]
-]:  # [["BASAL", "log_BASAL"]]:  #, ["ISF", "log_ISF"], ["CIR", "log_CIR"]]:
-    print("solving for the {} equations".format(y[0]))
+for y_name in Y_VARIABLE_LIST:
+    print(f"solving for the {y_name} equations")
+
+    # load in the right bounding parameters or fitting checks
+    if "BASAL" in y_name:
+        bounding_check_dictionary = make_condition_dicts("basal_fitting_checks")
+    elif "ISF" in y_name:
+        bounding_check_dictionary = make_condition_dicts("isf_fitting_checks")
+    elif "CIR" in y_name:
+        bounding_check_dictionary = make_condition_dicts("cir_fitting_checks")
 
     # consider all combinations
-    intercept = ["X_intercept"]
+    intercept = ["off", "X_intercept"]
     bmi = ["off", "BMI", "log_BMI"]
     cho = ["off", "CHO", "log_CHO"]
-    tdd = [["off", "TDD", "log_TDD"][TDD_OPTION]]
-    all_combos = list(product(y, intercept, bmi, cho, tdd))
+    # NOTE: IF YOU WANT TO RUN ALL TDD OPTIONS, REPLACE THE CURRENT LINE WITH THE COMMENTED LINE, IN THE LINE BELOW
+    tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]  # tdd = ["off", "TDD", "log_TDD", "1/TDD"]
+    all_combos = list(product([y_name], intercept, bmi, cho, tdd))
     ac_df = pd.DataFrame(all_combos, columns=["y", "X_intercept", "BMI", "CHO", "TDD"])
     ac_df["val_loss"] = np.nan
     for x_beta in x_cols:
         ac_df["beta_{}".format(x_beta)] = np.nan
 
     for combo, ac in enumerate(all_combos):
-        if utils.file_exists(
-            get_output_file_search_name(combo, y[0]), ".csv", use_startswith=True
-        ):
-            print(f"Skipping combo {combo} since we have data for it")
-            continue
+        if SKIP_ALREADY_RUN:
+            if utils.file_exists(get_output_file_search_name(combo, y_name), ".csv", use_startswith=True):
+                print(f"Skipping combo {combo} since we have data for it")
+                continue
 
         print(combo, list(ac))
         [y_lin_log, x_intercept, bmi_lin_log, cho_lin_log, tdd_lin_log] = ac
@@ -507,6 +464,10 @@ for y in [
         X_cols = list(set(X_cols))
         if "off" in X_cols:
             X_cols.remove("off")
+
+        if len(X_cols) == 0:
+            print(f"Skipping combo {combo} because all parameters are off")
+            continue
 
         # fit with custom loss function
         X_df = pd.DataFrame(X_train[X_cols])
@@ -518,31 +479,18 @@ for y in [
             linear_regression_equation,
             custom_basal_loss_with_inf,
             verbose=VERBOSE,
-            workers=WORKERS,  # -1
+            workers=WORKERS,
         )
 
         if not success:
             print(f"ERROR: unable to find fit for {list(ac)} parameters")
             continue
 
-        if MAKE_GRAPHS:
-            fixed_parameters = top_result.loc[0, X_cols].values
-            parameter_graphs.make_graphs(
-                linear_regression_equation, fixed_parameters, X_cols, y_lin_log
-            )
-
         for result_col in top_result.columns:
             if result_col == "train_loss":
                 ac_df.loc[combo, "train_loss"] = top_result[result_col].values
             else:
-                ac_df.loc[combo, "beta_{}".format(result_col)] = top_result[
-                    result_col
-                ].values
-
-        # need to take an equation and run it through the custom loss function
-        # need to correct the loss values for the log_basal results
-        # double check that the seeds do not change
-        # see if there are issues with the searching the log space
+                ac_df.loc[combo, "beta_{}".format(result_col)] = top_result[result_col].values
 
         # break the training set into 5 folds for model selection with cross validation
         kf = KFold(n_splits=5)
@@ -565,10 +513,8 @@ for y in [
                 linear_regression_equation,
                 custom_basal_loss_with_inf,
                 verbose=VERBOSE,
-                workers=WORKERS,  # -1
+                workers=WORKERS,
             )
-
-            # add in the rayhan and traditional equations here and run on custom loss function
 
             # run fit model on validation set
             X_df_val = pd.DataFrame(X_val_fold[X_cols])
@@ -576,8 +522,6 @@ for y in [
             fixed_parameters = top_result.loc[0, X_cols].values
             vals = X_df_val.values
             y_predict = linear_regression_equation(fixed_parameters, X_df_val.values)
-            if "log" in y_lin_log:
-                y_predict = np.exp(y_predict)
 
             fold_X_col_names = list(X_df_val.columns)
             val_loss = custom_basal_loss_with_inf(
@@ -587,28 +531,23 @@ for y in [
                 fixed_parameters,
                 fold_X_col_names,
                 y_lin_log,
+                transform_loss=True,
             )
             ac_df.loc[combo, "fold_{}_val_loss".format(fold)] = val_loss
             for result_col in top_result.columns:
-                ac_df.loc[
-                    combo, "fold_{}_train_{}".format(fold, result_col)
-                ] = top_result[result_col].values
+                ac_df.loc[combo, "fold_{}_train_{}".format(fold, result_col)] = top_result[result_col].values
 
             if fold == 5:
                 val_fold_loss_list = []
                 for f in range(1, fold + 1):
-                    val_fold_loss_list.append(
-                        ac_df.loc[combo, "fold_{}_val_loss".format(f)]
-                    )
+                    val_fold_loss_list.append(ac_df.loc[combo, "fold_{}_val_loss".format(f)])
 
                 val_fold_loss_array = np.array(val_fold_loss_list)
 
-                avg_val_loss = np.mean(
-                    val_fold_loss_array[val_fold_loss_array < np.inf]
-                )
+                avg_val_loss = np.mean(val_fold_loss_array[val_fold_loss_array < np.inf])
                 ac_df.loc[combo, "val_loss"] = avg_val_loss
 
-            ac_df.to_csv(get_output_file_name(combo, y[0]))
+            ac_df.to_csv(get_output_file_name(combo, y_name))
 
 ac_df.reset_index(inplace=True)
-ac_df.to_csv(get_output_file_name("final", y[0]))
+ac_df.to_csv(get_output_file_name("final", y_name))
