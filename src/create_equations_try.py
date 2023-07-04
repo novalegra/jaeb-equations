@@ -7,9 +7,9 @@ import pandas as pd
 import utils
 from create_equations_helpers import (
     brute_optimize,
+    custom_basal_loss_with_inf,
     custom_objective_function,
     linear_regression_equation,
-    custom_basal_loss_with_inf,
 )
 from sklearn.model_selection import KFold, train_test_split
 
@@ -44,6 +44,7 @@ elif "CIR" in Y_VARIABLE_LIST[0]:
 elif "BASAL" in Y_VARIABLE_LIST[0]:
     y_range = 10
     y_steps = 0.5
+
 
 def get_output_file_search_name(chunk_index, analysis_type):
     return f"{analysis_type}-{TDD_OPTION}-{LOCAL_SEARCH_ON_TOP_N_RESULTS}-equation-results-MAPE-lastindex-{chunk_index}"
@@ -224,7 +225,6 @@ X_train, X_test, y_train, y_test = train_test_split(
 for y_name in Y_VARIABLE_LIST:
     print(f"solving for the {y_name} equations")
 
-
     # consider all combinations
     intercept = ["off", "X_intercept"]
     bmi = ["off", "BMI", "log_BMI"]
@@ -239,7 +239,12 @@ for y_name in Y_VARIABLE_LIST:
 
     for combo, ac in enumerate(all_combos):
         if SKIP_ALREADY_RUN:
-            if utils.file_exists(get_output_file_search_name(combo, y_name), ".csv", use_startswith=True):
+            if utils.file_exists(
+                get_output_file_search_name(combo, y_name),
+                ".csv",
+                use_startswith=True,
+                search_dir=os.path.join(".", "results"),
+            ):
                 print(f"Skipping combo {combo} since we have data for it")
                 continue
 

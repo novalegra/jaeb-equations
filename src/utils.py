@@ -90,7 +90,7 @@ def find_full_path(resource_name, extension):
     raise Exception("No file found for specified resource name & extension")
 
 
-def file_exists(file_name, extension, use_startswith=False):
+def file_exists(file_name, extension, use_startswith=False, search_dir=Path(__file__).parent.parent):
     """ Find if a file exists, given name and extension
 
     Arguments:
@@ -101,7 +101,7 @@ def file_exists(file_name, extension, use_startswith=False):
     Output:
     path to file
     """
-    search_dir = Path(__file__).parent.parent
+    # search_dir = Path(__file__).parent.parent
     for root, dirs, files in os.walk(search_dir):
         for name in files:
             (base, ext) = os.path.splitext(name)
