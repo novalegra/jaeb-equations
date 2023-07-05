@@ -6,15 +6,18 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import utils
-from create_equations_helpers import (brute_optimize,
-                                      custom_basal_loss_with_inf,
-                                      custom_objective_function,
-                                      linear_regression_equation)
+from create_equations_helpers import (
+    brute_optimize,
+    custom_basal_loss_with_inf,
+    custom_objective_function,
+    linear_regression_equation,
+)
 from sklearn.model_selection import KFold, train_test_split
 
 # %% CONSTANTS
 # Small constant to ensure log is never zero
 LOG_CONSTANT = 1
+
 
 def get_output_file_search_name(chunk_index, analysis_type):
     return f"{analysis_type}-{TDD_OPTION}-{LOCAL_SEARCH_ON_TOP_N_RESULTS}-equation-results-MAPE-lastindex-{chunk_index}"
@@ -141,11 +144,12 @@ def fit_equ_with_custom_loss(
     top_result_df = all_brute_results.loc[0:0, :]
     return top_result_df, all_brute_results, True
 
+
 def print_args(args):
-    print('--------------PARAMETERS SET BY USER--------------------')
+    print("--------------PARAMETERS SET BY USER--------------------")
     for arg, value in vars(args).items():
         print(f"{arg}: {value}")
-    print('----------------------------------')
+    print("----------------------------------")
 
 
 # %% START OF CODE
@@ -155,7 +159,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--y_variable_list",
         nargs="+",
-        default= ["CIR"], # ["BASAL", "log_BASAL", "ISF", "log_ISF", "CIR", "log_CIR"],
+        default=["CIR"],  # ["BASAL", "log_BASAL", "ISF", "log_ISF", "CIR", "log_CIR"],
         help="List of Y variables.",
     )
     parser.add_argument("--tdd_option", type=int, default=3, help="TDD Option 0:3")
