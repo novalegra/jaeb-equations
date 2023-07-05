@@ -1,3 +1,4 @@
+import argparse
 import os
 from datetime import datetime
 from itertools import product
@@ -5,47 +6,15 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import utils
-from create_equations_helpers import (
-    brute_optimize,
-    custom_basal_loss_with_inf,
-    custom_objective_function,
-    linear_regression_equation,
-)
+from create_equations_helpers import (brute_optimize,
+                                      custom_basal_loss_with_inf,
+                                      custom_objective_function,
+                                      linear_regression_equation)
 from sklearn.model_selection import KFold, train_test_split
-
-# %% SETTINGS FOR THE USER TO SET
-# NOTE: WITH THE WAY THE CODE IS CURRENTLY STRUCTURED IT IS RECOMMENDED THAT YOU RUN EACH Y-VARIABLE
-#   & EACH TDD OPTION SEPARATELY, SINCE EACH RUN TAKES SOME TIME. THIS WAS DONE TO ALLOW THE CODE TO BE RUN IN PARALLEL,
-#   ALBEIT MANUALLY. IF YOU WANT TO RUN ALL Y_VARIABLES AT ONCE, JUST REPLACE CURRENT LIST WITH THE COMMENTED LIST IN THE LINE BELOW.
-Y_VARIABLE_LIST = ["CIR"]  # ['BASAL', 'log_BASAL', 'ISF', 'log_ISF', 'CIR', 'log_CIR']
-# NOTE: IF YOU WANT TO RUN ALL TDD OPTION, COMMENT OUT THE TDD_OPTION HERE
-# AND FIND THIS LINE BELOW "tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]"
-# AND REPLACE IT WITH "tdd = ["off", "TDD", "log_TDD", "1/TDD"]"
-# tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]  # tdd = ["off", "TDD", "log_TDD", "1/TDD"]
-# SELECT A TDD OPTION [0 = "off", 1 = "TDD", 2 = "log_TDD", 3 = "1/TDD"]
-TDD_OPTION = 3
-
-WORKERS = -1  # set to 1 for debug mode and -1 to use all workers on your machine
-VERBOSE = False
-LOCAL_SEARCH_ON_TOP_N_RESULTS = 100
-LAST_STEP_INTERVAL = 100
-SKIP_ALREADY_RUN = True
 
 # %% CONSTANTS
 # Small constant to ensure log is never zero
 LOG_CONSTANT = 1
-
-# set up a custom search range for TDD
-if "ISF" in Y_VARIABLE_LIST[0]:
-    TDD_range = 4000
-    TDD_step = 100
-elif "CIR" in Y_VARIABLE_LIST[0]:
-    TDD_range = 1000
-    TDD_step = 50
-elif "BASAL" in Y_VARIABLE_LIST[0]:
-    TDD_range = 50
-    TDD_step = 0.5
-
 
 def get_output_file_search_name(chunk_index, analysis_type):
     return f"{analysis_type}-{TDD_OPTION}-{LOCAL_SEARCH_ON_TOP_N_RESULTS}-equation-results-MAPE-lastindex-{chunk_index}"
@@ -75,22 +44,12 @@ def fit_equ_with_custom_loss(
             for col_name in list(X_df.columns):
                 if "TDD" in col_name:
                     parameter_search_range_list.append(
-                        slice(
-                            np.round(-TDD_range, 5),
-                            np.round(TDD_range + TDD_step, 5),
-                            np.round(TDD_step, 5)
-                        )
+                        slice(np.round(-TDD_range, 5), np.round(TDD_range + TDD_step, 5), np.round(TDD_step, 5))
                     )
                 else:
-                    parameter_search_range_list.append(
-                        slice(
-                            np.round(-m, 5),
-                            np.round(m + step, 5),
-                            np.round(step, 5)
-                        )
-                    )
+                    parameter_search_range_list.append(slice(np.round(-m, 5), np.round(m + step, 5), np.round(step, 5)))
             parameter_search_range_tuple = tuple(parameter_search_range_list)
-            asdf = 5
+
             # parameter_search_range_tuple = tuple(
             #     [slice(np.round(-m, 5), np.round(m + step, 5), np.round(step, 5))] * len(X_df.columns)
             # )
@@ -182,9 +141,62 @@ def fit_equ_with_custom_loss(
     top_result_df = all_brute_results.loc[0:0, :]
     return top_result_df, all_brute_results, True
 
+def print_args(args):
+    print('--------------PARAMETERS SET BY USER--------------------')
+    for arg, value in vars(args).items():
+        print(f"{arg}: {value}")
+    print('----------------------------------')
+
 
 # %% START OF CODE
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Arguments to Pass to Function.")
+
+    parser.add_argument(
+        "--y_variable_list",
+        nargs="+",
+        default= ["CIR"], # ["BASAL", "log_BASAL", "ISF", "log_ISF", "CIR", "log_CIR"],
+        help="List of Y variables.",
+    )
+    parser.add_argument("--tdd_option", type=int, default=3, help="TDD Option 0:3")
+    parser.add_argument("--workers", type=int, default=1, help="Number of worker -1 (all), 1 for debug")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Verbose flag.")
+    parser.add_argument("--local_search_on_top_n_results", type=int, default=100, help="Local search on top N results.")
+    parser.add_argument("--last_step_interval", type=int, default=100, help="Last step interval.")
+    parser.add_argument("--skip_already_run", action="store_true", default=True, help="Skip already run flag.")
+
+    args = parser.parse_args()
+    print_args(args)
+
+    # %% SETTINGS FOR THE USER TO SET
+    # NOTE: WITH THE WAY THE CODE IS CURRENTLY STRUCTURED IT IS RECOMMENDED THAT YOU RUN EACH Y-VARIABLE
+    #   & EACH TDD OPTION SEPARATELY, SINCE EACH RUN TAKES SOME TIME. THIS WAS DONE TO ALLOW THE CODE TO BE RUN IN PARALLEL,
+    #   ALBEIT MANUALLY. IF YOU WANT TO RUN ALL Y_VARIABLES AT ONCE, JUST REPLACE CURRENT LIST WITH THE COMMENTED LIST IN THE LINE BELOW.
+    Y_VARIABLE_LIST = args.y_variable_list  # ['BASAL', 'log_BASAL', 'ISF', 'log_ISF', 'CIR', 'log_CIR']
+
+    # NOTE: IF YOU WANT TO RUN ALL TDD OPTION, COMMENT OUT THE TDD_OPTION HERE
+    # AND FIND THIS LINE BELOW "tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]"
+    # AND REPLACE IT WITH "tdd = ["off", "TDD", "log_TDD", "1/TDD"]"
+    # tdd = [["off", "TDD", "log_TDD", "1/TDD"][TDD_OPTION]]  # tdd = ["off", "TDD", "log_TDD", "1/TDD"]
+    # SELECT A TDD OPTION [0 = "off", 1 = "TDD", 2 = "log_TDD", 3 = "1/TDD"]
+    TDD_OPTION = args.tdd_option
+    WORKERS = args.workers  # set to 1 for debug mode and -1 to use all workers on your machine
+    VERBOSE = args.verbose
+    LOCAL_SEARCH_ON_TOP_N_RESULTS = args.local_search_on_top_n_results
+    LAST_STEP_INTERVAL = args.last_step_interval
+    SKIP_ALREADY_RUN = args.skip_already_run
+
+    # set up a custom search range for TDD
+    if "ISF" in Y_VARIABLE_LIST[0]:
+        TDD_range = 2000
+        TDD_step = 100
+    elif "CIR" in Y_VARIABLE_LIST[0]:
+        TDD_range = 500
+        TDD_step = 50
+    elif "BASAL" in Y_VARIABLE_LIST[0]:
+        TDD_range = 50
+        TDD_step = 0.5
+
     # load in data
     file_path = utils.find_full_path("2021-05-02_equation_paper_aspirational_data_reduced", ".csv")
     all_data = pd.read_csv(
